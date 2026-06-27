@@ -41,6 +41,14 @@ node_modules/
 npm-debug.log
 yarn-error.log
 
+# Environment config
+.env
+.env.*
+!.env.example
+secrets/*.local.json
+secrets/*service-account*.json
+!secrets/*.example.json
+
 # fastlane
 #
 # It is recommended to not store the screenshots in the git repo. Instead, use fastlane to re-generate the
