@@ -1,0 +1,16 @@
+export const COLLECTIONS = {
+  USERS: 'users',
+  EVENTS: 'events',
+  COMMUNITIES: 'communities',
+  LISTINGS: 'listings',
+  CHATS: 'chats',
+  MESSAGES: 'messages',
+  ATTENDEES: 'attendees',
+  MEMBERS: 'members',
+  POSTS: 'posts',
+  COMMENTS: 'comments',
+  NOTIFICATIONS: 'notifications',
+  SAVED_EVENTS: 'savedEvents',
+  SAVED_LISTINGS: 'savedListings',
+  FOLLOWS: 'follows',
+};
