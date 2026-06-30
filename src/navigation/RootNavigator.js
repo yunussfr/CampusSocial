@@ -4,6 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ROUTES } from '../constants/routes';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { ChatListScreen } from '../screens/chat/ChatListScreen';
 import { CommunityDetailScreen } from '../screens/communities/CommunityDetailScreen';
 import { CommunityListScreen } from '../screens/communities/CommunityListScreen';
@@ -17,8 +18,14 @@ import { CreateEventScreen } from '../screens/events/CreateEventScreen';
 import { DiscoverScreen } from '../screens/events/DiscoverScreen';
 import { EventDetailScreen } from '../screens/events/EventDetailScreen';
 import { CreateListingScreen } from '../screens/market/CreateListingScreen';
+import { ListingDetailScreen } from '../screens/market/ListingDetailScreen';
 import { MarketHomeScreen } from '../screens/market/MarketHomeScreen';
+import { MyListingsScreen } from '../screens/market/MyListingsScreen';
+import { ChatDetailScreen } from '../screens/chat/ChatDetailScreen';
+import { EditProfileScreen } from '../screens/profile/EditProfileScreen';
 import { ProfileScreen } from '../screens/profile/ProfileScreen';
+import { UserProfileScreen } from '../screens/profile/UserProfileScreen';
+import { NotificationsScreen } from '../screens/settings/NotificationsScreen';
 import { SettingsScreen } from '../screens/settings/SettingsScreen';
 
 const AuthStack = createNativeStackNavigator();
@@ -66,8 +73,10 @@ function AuthNavigator() {
 }
 
 function EventsNavigator() {
+  const screenOptions = useStackOptions();
+
   return (
-    <EventsStack.Navigator>
+    <EventsStack.Navigator screenOptions={screenOptions}>
       <EventsStack.Screen
         name={ROUTES.DISCOVER}
         component={DiscoverScreen}
@@ -88,8 +97,10 @@ function EventsNavigator() {
 }
 
 function CommunitiesNavigator() {
+  const screenOptions = useStackOptions();
+
   return (
-    <CommunitiesStack.Navigator>
+    <CommunitiesStack.Navigator screenOptions={screenOptions}>
       <CommunitiesStack.Screen
         name={ROUTES.COMMUNITY_LIST}
         component={CommunityListScreen}
@@ -112,8 +123,10 @@ function CommunitiesNavigator() {
 }
 
 function MarketNavigator() {
+  const screenOptions = useStackOptions();
+
   return (
-    <MarketStack.Navigator>
+    <MarketStack.Navigator screenOptions={screenOptions}>
       <MarketStack.Screen
         name={ROUTES.MARKET_HOME}
         component={MarketHomeScreen}
@@ -122,26 +135,51 @@ function MarketNavigator() {
       <MarketStack.Screen
         name={ROUTES.CREATE_LISTING}
         component={CreateListingScreen}
+        options={{ title: 'Ilan Olustur' }}
+      />
+      <MarketStack.Screen
+        name={ROUTES.LISTING_DETAIL}
+        component={ListingDetailScreen}
+        options={{ title: 'Ilan Detayi' }}
+      />
+      <MarketStack.Screen
+        name={ROUTES.MY_LISTINGS}
+        component={MyListingsScreen}
+        options={{ title: 'Ilanlarim' }}
+      />
+      <MarketStack.Screen
+        name={ROUTES.CHAT_DETAIL}
+        component={ChatDetailScreen}
+        options={{ title: 'Chat' }}
       />
     </MarketStack.Navigator>
   );
 }
 
 function ChatNavigator() {
+  const screenOptions = useStackOptions();
+
   return (
-    <ChatStack.Navigator>
+    <ChatStack.Navigator screenOptions={screenOptions}>
       <ChatStack.Screen
         name={ROUTES.CHAT_LIST}
         component={ChatListScreen}
         options={{ title: 'Mesajlar' }}
+      />
+      <ChatStack.Screen
+        name={ROUTES.CHAT_DETAIL}
+        component={ChatDetailScreen}
+        options={{ title: 'Chat' }}
       />
     </ChatStack.Navigator>
   );
 }
 
 function ProfileNavigator() {
+  const screenOptions = useStackOptions();
+
   return (
-    <ProfileStack.Navigator>
+    <ProfileStack.Navigator screenOptions={screenOptions}>
       <ProfileStack.Screen
         name={ROUTES.PROFILE}
         component={ProfileScreen}
@@ -152,39 +190,106 @@ function ProfileNavigator() {
         component={SettingsScreen}
         options={{ title: 'Ayarlar' }}
       />
+      <ProfileStack.Screen
+        name={ROUTES.EDIT_PROFILE}
+        component={EditProfileScreen}
+        options={{ title: 'Profili Duzenle' }}
+      />
+      <ProfileStack.Screen
+        name={ROUTES.USER_PROFILE}
+        component={UserProfileScreen}
+        options={{ title: 'Kullanici Profili' }}
+      />
+      <ProfileStack.Screen
+        name={ROUTES.NOTIFICATIONS}
+        component={NotificationsScreen}
+        options={{ title: 'Bildirimler' }}
+      />
     </ProfileStack.Navigator>
   );
 }
 
 function MainTabs() {
+  const { theme } = useTheme();
+
   return (
-    <Tab.Navigator screenOptions={{ headerShown: false }}>
+    <Tab.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.mutedText,
+        tabBarLabelStyle: styles.tabLabel,
+        tabBarStyle: [
+          styles.tabBar,
+          {
+            backgroundColor:
+              theme.mode === 'dark'
+                ? 'rgba(15,27,45,0.94)'
+                : 'rgba(248,249,255,0.94)',
+            borderTopColor: theme.colors.border,
+          },
+        ],
+      }}>
       <Tab.Screen
         name="EventsTab"
         component={EventsNavigator}
-        options={{ title: 'Discover' }}
+        options={{ title: 'Discover', tabBarIcon: TabDot }}
       />
       <Tab.Screen
         name="CommunitiesTab"
         component={CommunitiesNavigator}
-        options={{ title: 'Topluluk' }}
+        options={{ title: 'Community', tabBarIcon: TabDot }}
       />
       <Tab.Screen
         name="MarketTab"
         component={MarketNavigator}
-        options={{ title: 'Market' }}
+        options={{ title: 'Market', tabBarIcon: TabDot }}
       />
       <Tab.Screen
         name="ChatTab"
         component={ChatNavigator}
-        options={{ title: 'Mesajlar' }}
+        options={{ title: 'Messages', tabBarIcon: TabDot }}
       />
       <Tab.Screen
         name="ProfileTab"
         component={ProfileNavigator}
-        options={{ title: 'Profil' }}
+        options={{ title: 'Profile', tabBarIcon: TabDot }}
       />
     </Tab.Navigator>
+  );
+}
+
+function useStackOptions() {
+  const { theme } = useTheme();
+
+  return {
+    headerStyle: {
+      backgroundColor: theme.colors.background,
+    },
+    headerShadowVisible: false,
+    headerTintColor: theme.colors.text,
+    headerTitleStyle: {
+      color: theme.colors.text,
+      fontSize: 20,
+      fontWeight: '800',
+    },
+    contentStyle: {
+      backgroundColor: theme.colors.background,
+    },
+  };
+}
+
+function TabDot({ color, focused }) {
+  return (
+    <View
+      style={[
+        styles.tabIcon,
+        {
+          borderColor: color,
+          backgroundColor: focused ? color : 'transparent',
+        },
+      ]}
+    />
   );
 }
 
@@ -200,5 +305,29 @@ const styles = StyleSheet.create({
   loadingText: {
     color: '#64748B',
     fontSize: 15,
+  },
+  tabBar: {
+    height: 64,
+    paddingTop: 8,
+    paddingBottom: 8,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    position: 'absolute',
+    shadowColor: '#000000',
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: -4 },
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  tabLabel: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '600',
+  },
+  tabIcon: {
+    width: 18,
+    height: 18,
+    borderRadius: 999,
+    borderWidth: 2,
   },
 });
