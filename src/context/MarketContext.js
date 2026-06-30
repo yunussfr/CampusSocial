@@ -10,6 +10,9 @@ import {
   createListing,
   saveListing,
   subscribeToListings,
+  subscribeToSavedListingIds,
+  subscribeToUserListings,
+  updateListingImages,
 } from '../services/marketService';
 
 const MarketContext = createContext(null);
@@ -38,8 +41,38 @@ export function MarketProvider({ children }) {
     return createListing(input, seller);
   }, []);
 
+  const startMyListingsListener = useCallback(userId => {
+    dispatch({ type: 'LISTINGS_LOADING' });
+
+    return subscribeToUserListings({
+      userId,
+      onData: listings => {
+        dispatch({ type: 'LISTINGS_RECEIVED', payload: listings });
+      },
+      onError: error => {
+        dispatch({ type: 'LISTINGS_ERROR', payload: error.message });
+      },
+    });
+  }, []);
+
+  const startSavedListingsListener = useCallback(userId => {
+    return subscribeToSavedListingIds({
+      userId,
+      onData: ids => {
+        dispatch({ type: 'SAVED_LISTINGS_RECEIVED', payload: ids });
+      },
+      onError: error => {
+        dispatch({ type: 'LISTINGS_ERROR', payload: error.message });
+      },
+    });
+  }, []);
+
   const saveSelectedListing = useCallback(async (userId, listingId) => {
     return saveListing(userId, listingId);
+  }, []);
+
+  const setListingImages = useCallback(async (listingId, imageURLs) => {
+    return updateListingImages(listingId, imageURLs);
   }, []);
 
   const value = useMemo(
@@ -49,13 +82,19 @@ export function MarketProvider({ children }) {
       dispatch,
       saveSelectedListing,
       selectListing,
+      setListingImages,
+      startMyListingsListener,
       startListingsListener,
+      startSavedListingsListener,
     }),
     [
       addListing,
       saveSelectedListing,
       selectListing,
+      setListingImages,
+      startMyListingsListener,
       startListingsListener,
+      startSavedListingsListener,
       state,
     ],
   );
