@@ -9,11 +9,16 @@ import React, {
 import {
   completeUserProfile,
   getUserProfile,
+  followUser,
   registerWithEmail,
+  requestAndSaveFcmToken,
   sendPasswordReset,
+  setUserFcmToken,
   signInWithEmail,
   signOutUser,
   subscribeToAuthState,
+  unfollowUser,
+  updateUserProfile,
 } from '../services/authService';
 
 const AuthContext = createContext(null);
@@ -111,6 +116,57 @@ export function AuthProvider({ children }) {
     }
   }, [user]);
 
+  const updateProfile = useCallback(async payload => {
+    if (!user) {
+      return null;
+    }
+
+    setError(null);
+
+    try {
+      const nextProfile = await updateUserProfile(user.uid, payload);
+      setProfile(nextProfile);
+      return nextProfile;
+    } catch (profileError) {
+      setError(profileError.message);
+      return null;
+    }
+  }, [user]);
+
+  const followProfile = useCallback(async targetUserId => {
+    if (!user) {
+      return null;
+    }
+
+    return followUser(user.uid, targetUserId);
+  }, [user]);
+
+  const unfollowProfile = useCallback(async targetUserId => {
+    if (!user) {
+      return null;
+    }
+
+    return unfollowUser(user.uid, targetUserId);
+  }, [user]);
+
+  const updateFcmToken = useCallback(async fcmToken => {
+    if (!user) {
+      return null;
+    }
+
+    await setUserFcmToken(user.uid, fcmToken);
+    return refreshProfile();
+  }, [refreshProfile, user]);
+
+  const enableNotifications = useCallback(async () => {
+    if (!user) {
+      return null;
+    }
+
+    await requestAndSaveFcmToken(user.uid);
+    return refreshProfile();
+  }, [refreshProfile, user]);
+
   const resetPassword = useCallback(async email => {
     setError(null);
 
@@ -145,6 +201,11 @@ export function AuthProvider({ children }) {
       register,
       completeProfile,
       refreshProfile,
+      updateProfile,
+      enableNotifications,
+      followProfile,
+      unfollowProfile,
+      updateFcmToken,
       resetPassword,
       logout,
       setUser,
@@ -162,6 +223,11 @@ export function AuthProvider({ children }) {
       register,
       resetPassword,
       user,
+      enableNotifications,
+      updateFcmToken,
+      updateProfile,
+      followProfile,
+      unfollowProfile,
     ],
   );
 

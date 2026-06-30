@@ -6,9 +6,12 @@ import React, {
   useState,
 } from 'react';
 import {
+  createOrGetDirectChat,
+  markChatRead,
   sendMessage,
   subscribeToChats,
   subscribeToMessages,
+  subscribeToNotifications,
 } from '../services/chatService';
 
 const ChatContext = createContext(null);
@@ -17,6 +20,7 @@ export function ChatProvider({ children }) {
   const [chats, setChats] = useState([]);
   const [activeChat, setActiveChat] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -58,6 +62,31 @@ export function ChatProvider({ children }) {
     return sendMessage(chatId, senderId, text);
   }, []);
 
+  const startDirectChat = useCallback(async input => {
+    return createOrGetDirectChat(input);
+  }, []);
+
+  const markActiveChatRead = useCallback(async (chatId, userId) => {
+    return markChatRead(chatId, userId);
+  }, []);
+
+  const startNotificationsListener = useCallback(userId => {
+    setLoading(true);
+    setError(null);
+
+    return subscribeToNotifications({
+      userId,
+      onData: nextNotifications => {
+        setNotifications(nextNotifications);
+        setLoading(false);
+      },
+      onError: listenerError => {
+        setError(listenerError.message);
+        setLoading(false);
+      },
+    });
+  }, []);
+
   const value = useMemo(
     () => ({
       chats,
@@ -65,21 +94,29 @@ export function ChatProvider({ children }) {
       error,
       loading,
       messages,
+      notifications,
+      markActiveChatRead,
       sendChatMessage,
       setChats,
       setActiveChat,
       startChatsListener,
+      startDirectChat,
       startMessagesListener,
+      startNotificationsListener,
     }),
     [
       activeChat,
       chats,
       error,
       loading,
+      markActiveChatRead,
       messages,
+      notifications,
       sendChatMessage,
+      startDirectChat,
       startChatsListener,
       startMessagesListener,
+      startNotificationsListener,
     ],
   );
 

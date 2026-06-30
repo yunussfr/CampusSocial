@@ -1,5 +1,5 @@
 import firestore from '@react-native-firebase/firestore';
-import { firebaseAuth, firestoreDb } from './firebase';
+import { firebaseAuth, firebaseMessaging, firestoreDb } from './firebase';
 import { COLLECTIONS } from '../constants/collections';
 
 function mapUser(firebaseUser) {
@@ -114,6 +114,81 @@ export async function completeUserProfile(uid, profile) {
   }
 
   return getUserProfile(uid);
+}
+
+export async function updateUserProfile(uid, profile) {
+  const nextProfile = {
+    displayName: profile.displayName.trim(),
+    department: profile.department.trim(),
+    year: Number(profile.year),
+    interests: profile.interests || [],
+    bio: profile.bio.trim(),
+    photoURL: profile.photoURL || '',
+    updatedAt: firestore.FieldValue.serverTimestamp(),
+  };
+
+  await firestoreDb
+    .collection(COLLECTIONS.USERS)
+    .doc(uid)
+    .set(nextProfile, { merge: true });
+
+  const currentUser = firebaseAuth.currentUser;
+
+  if (currentUser?.updateProfile) {
+    await currentUser.updateProfile({
+      displayName: nextProfile.displayName,
+      photoURL: nextProfile.photoURL || undefined,
+    });
+  }
+
+  return getUserProfile(uid);
+}
+
+export async function followUser(currentUserId, targetUserId) {
+  const now = firestore.FieldValue.serverTimestamp();
+
+  return firestoreDb
+    .collection(COLLECTIONS.USERS)
+    .doc(currentUserId)
+    .collection(COLLECTIONS.FOLLOWS)
+    .doc(targetUserId)
+    .set({
+      targetUserId,
+      followedAt: now,
+    });
+}
+
+export async function unfollowUser(currentUserId, targetUserId) {
+  return firestoreDb
+    .collection(COLLECTIONS.USERS)
+    .doc(currentUserId)
+    .collection(COLLECTIONS.FOLLOWS)
+    .doc(targetUserId)
+    .delete();
+}
+
+export async function setUserFcmToken(uid, fcmToken) {
+  return firestoreDb.collection(COLLECTIONS.USERS).doc(uid).set(
+    {
+      fcmToken,
+      updatedAt: firestore.FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
+}
+
+export async function requestAndSaveFcmToken(uid) {
+  if (firebaseMessaging.requestPermission) {
+    await firebaseMessaging.requestPermission();
+  }
+
+  const token = firebaseMessaging.getToken
+    ? await firebaseMessaging.getToken()
+    : null;
+
+  await setUserFcmToken(uid, token);
+
+  return token;
 }
 
 export async function sendPasswordReset(email) {

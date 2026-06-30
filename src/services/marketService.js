@@ -53,6 +53,36 @@ export async function createListing(input, seller) {
   return listingRef.id;
 }
 
+export function subscribeToUserListings({ userId, onData, onError }) {
+  return firestoreDb
+    .collection(COLLECTIONS.LISTINGS)
+    .where('sellerId', '==', userId)
+    .orderBy('createdAt', 'desc')
+    .onSnapshot(
+      snapshot => onData(snapshot.docs.map(mapDoc)),
+      error => {
+        if (onError) {
+          onError(error);
+        }
+      },
+    );
+}
+
+export function subscribeToSavedListingIds({ userId, onData, onError }) {
+  return firestoreDb
+    .collection(COLLECTIONS.USERS)
+    .doc(userId)
+    .collection(COLLECTIONS.SAVED_LISTINGS)
+    .onSnapshot(
+      snapshot => onData(snapshot.docs.map(doc => doc.id)),
+      error => {
+        if (onError) {
+          onError(error);
+        }
+      },
+    );
+}
+
 export async function saveListing(userId, listingId) {
   return firestoreDb
     .collection(COLLECTIONS.USERS)
@@ -63,4 +93,14 @@ export async function saveListing(userId, listingId) {
       listingId,
       savedAt: firestore.FieldValue.serverTimestamp(),
     });
+}
+
+export async function updateListingImages(listingId, imageURLs) {
+  return firestoreDb.collection(COLLECTIONS.LISTINGS).doc(listingId).set(
+    {
+      imageURLs,
+      updatedAt: firestore.FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
 }

@@ -1,16 +1,12 @@
 import React, { useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { AppButton, AppInput, Card, PageIntro, Screen } from '../../components/ui/DesignSystem';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 
 export function LoginScreen({ navigation }) {
   const { error, login } = useAuth();
+  const { theme } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -26,12 +22,11 @@ export function LoginScreen({ navigation }) {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>CampusConnect</Text>
-      <Text style={styles.subtitle}>Kampus hesabina giris yap.</Text>
-
-      <View style={styles.form}>
-        <TextInput
+    <Screen scroll style={styles.container}>
+      <View style={[styles.logo, { borderColor: theme.colors.primary }]} />
+      <PageIntro title="CampusVibe" subtitle="Kampus hesabina giris yap." />
+      <Card style={styles.form}>
+        <AppInput
           autoCapitalize="none"
           autoComplete="email"
           autoCorrect={false}
@@ -39,11 +34,10 @@ export function LoginScreen({ navigation }) {
           onChangeText={setEmail}
           placeholder="Email"
           spellCheck={false}
-          style={styles.input}
           textContentType="emailAddress"
           value={email}
         />
-        <TextInput
+        <AppInput
           autoCapitalize="none"
           autoComplete="password"
           autoCorrect={false}
@@ -51,96 +45,50 @@ export function LoginScreen({ navigation }) {
           placeholder="Sifre"
           secureTextEntry
           spellCheck={false}
-          style={styles.input}
           textContentType="password"
           value={password}
         />
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        <Pressable
-          disabled={submitting}
-          onPress={handleSubmit}
-          style={({ pressed }) => [
-            styles.primaryButton,
-            pressed || submitting ? styles.pressed : null,
-          ]}>
-          {submitting ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.primaryButtonText}>Giris Yap</Text>
-          )}
-        </Pressable>
-      </View>
-
-      <Pressable
-        onPress={() => navigation.navigate('ForgotPassword')}
-        style={styles.linkButton}>
-        <Text style={styles.linkText}>Sifremi unuttum</Text>
+        {error ? <Text style={[styles.error, { color: theme.colors.danger }]}>{error}</Text> : null}
+        <AppButton disabled={submitting} onPress={handleSubmit}>
+          {submitting ? <ActivityIndicator color="#FFFFFF" /> : 'Giris Yap'}
+        </AppButton>
+      </Card>
+      <Pressable onPress={() => navigation.navigate('ForgotPassword')} style={styles.linkButton}>
+        <Text style={[styles.linkText, { color: theme.colors.primary }]}>Sifremi unuttum</Text>
       </Pressable>
-      <Pressable
-        onPress={() => navigation.navigate('Register')}
-        style={styles.linkButton}>
-        <Text style={styles.linkText}>Yeni hesap olustur</Text>
+      <Pressable onPress={() => navigation.navigate('Register')} style={styles.linkButton}>
+        <Text style={[styles.linkText, { color: theme.colors.primary }]}>Yeni hesap olustur</Text>
       </Pressable>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     justifyContent: 'center',
-    padding: 24,
-    backgroundColor: '#F8FAFC',
+    gap: 12,
+    paddingTop: 88,
   },
-  title: {
-    color: '#0B1C30',
-    fontSize: 32,
-    fontWeight: '800',
-    marginBottom: 8,
-  },
-  subtitle: {
-    color: '#64748B',
-    fontSize: 16,
-    marginBottom: 28,
+  logo: {
+    width: 54,
+    height: 54,
+    borderRadius: 999,
+    borderWidth: 2,
   },
   form: {
     gap: 12,
-  },
-  input: {
-    minHeight: 48,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 10,
-    color: '#0B1C30',
-    backgroundColor: '#FFFFFF',
-  },
-  primaryButton: {
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 10,
-    backgroundColor: '#004AC6',
-  },
-  pressed: {
-    opacity: 0.72,
-  },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
+    padding: 16,
   },
   linkButton: {
     alignItems: 'center',
     paddingVertical: 10,
   },
   linkText: {
-    color: '#004AC6',
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   error: {
-    color: '#DC2626',
     fontSize: 14,
+    lineHeight: 20,
   },
 });
