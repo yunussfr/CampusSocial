@@ -8,6 +8,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { IMAGES } from '../../constants/assets';
 import { ROUTES } from '../../constants/routes';
 import { useAuth } from '../../context/AuthContext';
 import { useCommunities } from '../../context/CommunityContext';
@@ -99,9 +100,14 @@ export function CommunityDetailScreen({ navigation, route }) {
     <FlatList
       ListHeaderComponent={
         <View style={styles.header}>
-          {community.coverURL ? (
-            <Image source={{ uri: community.coverURL }} style={styles.cover} />
-          ) : null}
+          <Image
+            source={
+              community.coverURL
+                ? { uri: community.coverURL }
+                : IMAGES.coverPlaceholder
+            }
+            style={styles.cover}
+          />
           <Text style={styles.title}>{community.name}</Text>
           <Text style={styles.meta}>
             {community.category} - {community.memberCount} uye
