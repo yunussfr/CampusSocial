@@ -1,5 +1,6 @@
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ICONS, IMAGES } from '../../constants/assets';
 import { useTheme } from '../../context/ThemeContext';
 
 export function EventCard({ event, onPress }) {
@@ -17,9 +18,10 @@ export function EventCard({ event, onPress }) {
         },
       ]}>
       <View style={[styles.coverWrap, { backgroundColor: theme.colors.primarySoft }]}>
-        {event.coverURL ? (
-          <Image source={{ uri: event.coverURL }} style={styles.cover} />
-        ) : null}
+        <Image
+          source={event.coverURL ? { uri: event.coverURL } : IMAGES.coverPlaceholder}
+          style={styles.cover}
+        />
         <View style={[styles.dateBadge, { backgroundColor: theme.colors.surface }]}>
           <Text style={[styles.dateBadgeText, { color: theme.colors.primary }]}>
             {event.category || 'Etkinlik'}
@@ -31,9 +33,15 @@ export function EventCard({ event, onPress }) {
         <Text numberOfLines={2} style={styles.description}>
           {event.description}
         </Text>
-        <Text style={[styles.meta, { color: theme.colors.mutedText }]}>
-          {event.category} - {event.location}
-        </Text>
+        <View style={styles.metaRow}>
+          <Image
+            source={ICONS.location}
+            style={[styles.metaIcon, { tintColor: theme.colors.mutedText }]}
+          />
+          <Text style={[styles.meta, { color: theme.colors.mutedText }]}>
+            {event.category} - {event.location}
+          </Text>
+        </View>
         <View style={[styles.footer, { borderTopColor: theme.colors.border }]}>
           <Text style={[styles.meta, { color: theme.colors.subtleText }]}>
           Katilimci: {event.attendeeCount}/{event.capacity}
@@ -95,6 +103,16 @@ const styles = StyleSheet.create({
   meta: {
     fontSize: 13,
     lineHeight: 18,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  metaIcon: {
+    width: 16,
+    height: 16,
+    resizeMode: 'contain',
   },
   footer: {
     marginTop: 12,
