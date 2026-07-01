@@ -1,10 +1,14 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
+import { AppButton, Card, Screen, StateView } from '../../components/ui/DesignSystem';
+import { ICONS, IMAGES } from '../../constants/assets';
 import { useAuth } from '../../context/AuthContext';
 import { useEvents } from '../../context/EventContext';
+import { useTheme } from '../../context/ThemeContext';
 
 export function EventDetailScreen({ route }) {
   const { user } = useAuth();
+  const { theme } = useTheme();
   const { events, joinSelectedEvent, leaveSelectedEvent, selectedEvent } =
     useEvents();
   const [submitting, setSubmitting] = useState(false);
@@ -17,9 +21,9 @@ export function EventDetailScreen({ route }) {
 
   if (!event) {
     return (
-      <View style={styles.centerContent}>
-        <Text style={styles.title}>Etkinlik bulunamadi</Text>
-      </View>
+      <Screen>
+        <StateView empty title="Etkinlik bulunamadi." />
+      </Screen>
     );
   }
 
@@ -44,102 +48,124 @@ export function EventDetailScreen({ route }) {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{event.title}</Text>
-      <Text style={styles.meta}>{event.category}</Text>
-      <Text style={styles.description}>{event.description}</Text>
-      <Text style={styles.meta}>Konum: {event.location}</Text>
-      <Text style={styles.meta}>
-        Katilimci: {event.attendeeCount}/{event.capacity}
-      </Text>
+    <Screen scroll style={styles.container}>
+      <View style={[styles.hero, { backgroundColor: theme.colors.primarySoft }]}>
+        <Image
+          source={event.coverURL ? { uri: event.coverURL } : IMAGES.coverPlaceholder}
+          style={styles.heroImage}
+        />
+        <View style={styles.heroOverlay}>
+          <Text style={styles.heroBadge}>{event.category}</Text>
+          <Text style={styles.heroTitle}>{event.title}</Text>
+          <View style={styles.heroMetaRow}>
+            <Image source={ICONS.location} style={styles.heroMetaIcon} />
+            <Text style={styles.heroMeta}>{event.location}</Text>
+          </View>
+        </View>
+      </View>
+      <Card style={styles.card}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Detay</Text>
+        <Text style={[styles.description, { color: theme.colors.mutedText }]}>
+          {event.description}
+        </Text>
+        <Text style={[styles.meta, { color: theme.colors.subtleText }]}>
+          Katilimci: {event.attendeeCount}/{event.capacity}
+        </Text>
+      </Card>
       <View style={styles.actions}>
-        <Pressable
-          disabled={submitting}
-          onPress={handleJoin}
-          style={styles.primaryButton}>
-          <Text style={styles.primaryButtonText}>Katil</Text>
-        </Pressable>
-        <Pressable
+        <AppButton disabled={submitting} onPress={handleJoin} style={styles.action}>
+          Katil
+        </AppButton>
+        <AppButton
           disabled={submitting}
           onPress={handleLeave}
-          style={styles.secondaryButton}>
-          <Text style={styles.secondaryButtonText}>Ayril</Text>
-        </Pressable>
+          style={styles.action}
+          variant="secondary">
+          Ayril
+        </AppButton>
       </View>
-      <Text style={styles.note}>
-        Katilim sayaci Cloud Functions fazinda otomatik guncellenecek.
-      </Text>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  centerContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    backgroundColor: '#F8FAFC',
-  },
   container: {
-    flex: 1,
-    padding: 24,
-    backgroundColor: '#F8FAFC',
+    gap: 16,
   },
-  title: {
-    color: '#0B1C30',
+  hero: {
+    minHeight: 260,
+    borderRadius: 16,
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
+  },
+  heroImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+  },
+  heroOverlay: {
+    gap: 6,
+    padding: 20,
+    backgroundColor: 'rgba(0,0,0,0.42)',
+  },
+  heroBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    overflow: 'hidden',
+    color: '#FFFFFF',
+    backgroundColor: 'rgba(0,74,198,0.9)',
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  heroTitle: {
+    color: '#FFFFFF',
     fontSize: 28,
+    lineHeight: 35,
+    fontWeight: '900',
+  },
+  heroMeta: {
+    color: 'rgba(255,255,255,0.84)',
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  heroMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  heroMetaIcon: {
+    width: 18,
+    height: 18,
+    resizeMode: 'contain',
+    tintColor: 'rgba(255,255,255,0.84)',
+  },
+  card: {
+    padding: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    lineHeight: 24,
     fontWeight: '800',
     marginBottom: 8,
   },
   description: {
-    color: '#334155',
     fontSize: 15,
     lineHeight: 22,
-    marginVertical: 18,
   },
   meta: {
-    color: '#64748B',
     fontSize: 14,
     lineHeight: 20,
+    marginTop: 12,
   },
   actions: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 24,
   },
-  primaryButton: {
+  action: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-    borderRadius: 10,
-    backgroundColor: '#004AC6',
-  },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  secondaryButton: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 10,
-    backgroundColor: '#FFFFFF',
-  },
-  secondaryButtonText: {
-    color: '#0B1C30',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  note: {
-    color: '#64748B',
-    fontSize: 13,
-    lineHeight: 18,
-    marginTop: 16,
   },
 });

@@ -5,6 +5,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { EventCard } from '../../components/events/EventCard';
+import { IconButton } from '../../components/ui/IconButton';
 import {
   AppButton,
   AppInput,
@@ -15,6 +16,7 @@ import {
   SectionHeader,
   StateView,
 } from '../../components/ui/DesignSystem';
+import { ICONS } from '../../constants/assets';
 import { ROUTES } from '../../constants/routes';
 import { useEvents } from '../../context/EventContext';
 import { useAuth } from '../../context/AuthContext';
@@ -37,7 +39,16 @@ export function DiscoverScreen({ navigation }) {
 
   return (
     <>
-      <BrandHeader />
+      <BrandHeader
+        action={
+          <IconButton
+            accessibilityLabel="Bildirimler"
+            icon={ICONS.bell}
+            onPress={() => navigation.navigate(ROUTES.NOTIFICATIONS)}
+            size={22}
+          />
+        }
+      />
       <Screen padded={false}>
         <FlatList
           contentContainerStyle={styles.listContent}
@@ -51,6 +62,7 @@ export function DiscoverScreen({ navigation }) {
               />
               <AppInput
                 editable={false}
+                leftIcon={ICONS.search}
                 pointerEvents="none"
                 placeholder="Etkinlik, topluluk veya mekan ara..."
               />
