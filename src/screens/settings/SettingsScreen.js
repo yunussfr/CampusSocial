@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   AppButton,
   Card,
@@ -7,6 +7,7 @@ import {
   Screen,
   SectionHeader,
 } from '../../components/ui/DesignSystem';
+import { ICONS } from '../../constants/assets';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -33,6 +34,7 @@ export function SettingsScreen() {
       <SectionHeader title="Gorunum" />
       <Card style={styles.card}>
         <SettingRow
+          icon={ICONS.calendar}
           label="Tema"
           onPress={toggleTheme}
           value={mode === 'dark' ? 'Dark' : 'Light'}
@@ -41,25 +43,44 @@ export function SettingsScreen() {
 
       <SectionHeader title="Bildirimler" />
       <Card style={styles.card}>
-        <SettingRow label="FCM bildirimleri" onPress={handleEnableNotifications} value="Ac" />
+        <SettingRow
+          icon={ICONS.bell}
+          label="FCM bildirimleri"
+          onPress={handleEnableNotifications}
+          value="Ac"
+        />
         <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
-        <SettingRow label="Bildirim tokeni" onPress={handleDisableNotifications} value="Kapat" />
+        <SettingRow
+          icon={ICONS.location}
+          label="Bildirim tokeni"
+          onPress={handleDisableNotifications}
+          value="Kapat"
+        />
       </Card>
 
       <SectionHeader title="Hesap" />
-      <AppButton onPress={logout} variant="danger">
-        Cikis Yap
+      <AppButton onPress={logout} style={styles.logoutButton} variant="danger">
+        <Image source={ICONS.logout} style={styles.logoutIcon} />
+        <Text style={styles.logoutText}>Cikis Yap</Text>
       </AppButton>
     </Screen>
   );
 }
 
-function SettingRow({ label, value, onPress }) {
+function SettingRow({ icon, label, value, onPress }) {
   const { theme } = useTheme();
 
   return (
     <Pressable onPress={onPress} style={styles.row}>
-      <Text style={[styles.rowLabel, { color: theme.colors.text }]}>{label}</Text>
+      <View style={styles.rowLabelWrap}>
+        {icon ? (
+          <Image
+            source={icon}
+            style={[styles.rowIcon, { tintColor: theme.colors.primary }]}
+          />
+        ) : null}
+        <Text style={[styles.rowLabel, { color: theme.colors.text }]}>{label}</Text>
+      </View>
       <View style={[styles.toggle, { backgroundColor: theme.colors.primarySoft }]}>
         <Text style={[styles.toggleText, { color: theme.colors.primary }]}>{value}</Text>
       </View>
@@ -84,7 +105,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  rowLabelWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingRight: 12,
+  },
+  rowIcon: {
+    width: 22,
+    height: 22,
+    resizeMode: 'contain',
+  },
   rowLabel: {
+    flexShrink: 1,
     fontSize: 16,
     lineHeight: 22,
     fontWeight: '700',
@@ -104,5 +138,21 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  logoutIcon: {
+    width: 20,
+    height: 20,
+    resizeMode: 'contain',
+    tintColor: '#FFFFFF',
+  },
+  logoutText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: '800',
   },
 });

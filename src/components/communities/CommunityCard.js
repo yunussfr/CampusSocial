@@ -1,5 +1,6 @@
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { IMAGES } from '../../constants/assets';
 import { useTheme } from '../../context/ThemeContext';
 
 export function CommunityCard({ community, onPress }) {
@@ -16,16 +17,14 @@ export function CommunityCard({ community, onPress }) {
           shadowColor: theme.colors.shadow,
         },
       ]}>
-      {community.coverURL ? (
-        <Image source={{ uri: community.coverURL }} style={styles.cover} />
-      ) : (
-        <View
-          style={[
-            styles.cover,
-            { backgroundColor: community.isPrivate ? theme.colors.accent : theme.colors.primary },
-          ]}
-        />
-      )}
+      <Image
+        source={
+          community.coverURL
+            ? { uri: community.coverURL }
+            : IMAGES.coverPlaceholder
+        }
+        style={styles.cover}
+      />
       <View style={styles.content}>
         <Text style={[styles.title, { color: theme.colors.text }]}>{community.name}</Text>
         <Text numberOfLines={2} style={styles.description}>

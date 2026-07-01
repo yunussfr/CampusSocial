@@ -1,11 +1,14 @@
 import React, { useEffect } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text } from 'react-native';
+import { Card, PageIntro, Screen, StateView } from '../../components/ui/DesignSystem';
 import { useAuth } from '../../context/AuthContext';
 import { useChats } from '../../context/ChatContext';
+import { useTheme } from '../../context/ThemeContext';
 
 export function NotificationsScreen() {
   const { user } = useAuth();
   const { error, notifications, startNotificationsListener } = useChats();
+  const { theme } = useTheme();
 
   useEffect(() => {
     if (!user) {
@@ -16,69 +19,52 @@ export function NotificationsScreen() {
   }, [startNotificationsListener, user]);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Bildirimler</Text>
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+    <Screen padded={false}>
       <FlatList
         contentContainerStyle={styles.listContent}
         data={notifications}
         keyExtractor={item => item.id}
+        ListHeaderComponent={
+          <>
+            <PageIntro title="Bildirimler" subtitle="Kampus ve hesap hareketleri." />
+            <StateView error={error} />
+          </>
+        }
         ListEmptyComponent={
-          <Text style={styles.emptyText}>Henuz bildirim yok.</Text>
+          !error ? <StateView empty title="Henuz bildirim yok." /> : null
         }
         renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{item.title || 'Bildirim'}</Text>
-            <Text style={styles.message}>{item.message || item.body}</Text>
-          </View>
+          <Card style={styles.card}>
+            <Text style={[styles.cardTitle, { color: theme.colors.text }]}>
+              {item.title || 'Bildirim'}
+            </Text>
+            <Text style={[styles.message, { color: theme.colors.mutedText }]}>
+              {item.message || item.body}
+            </Text>
+          </Card>
         )}
       />
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    backgroundColor: '#F8FAFC',
-  },
-  title: {
-    color: '#0B1C30',
-    fontSize: 28,
-    fontWeight: '800',
-  },
   listContent: {
     gap: 12,
-    paddingVertical: 20,
+    paddingHorizontal: 16,
+    paddingBottom: 112,
+    paddingTop: 24,
   },
   card: {
     gap: 6,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
   },
   cardTitle: {
-    color: '#0B1C30',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   message: {
-    color: '#334155',
     fontSize: 14,
     lineHeight: 20,
-  },
-  emptyText: {
-    color: '#64748B',
-    fontSize: 15,
-    marginTop: 24,
-  },
-  errorText: {
-    color: '#DC2626',
-    fontSize: 14,
-    marginTop: 12,
   },
 });

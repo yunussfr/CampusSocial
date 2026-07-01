@@ -1,6 +1,7 @@
 import React from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { AppButton, Card, Screen } from '../../components/ui/DesignSystem';
+import { getProfilePlaceholder } from '../../constants/assets';
 import { ROUTES } from '../../constants/routes';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -20,15 +21,14 @@ export function ProfileScreen({ navigation }) {
           },
         ]}>
         <View style={styles.avatarWrap}>
-          {profile?.photoURL ? (
-            <Image source={{ uri: profile.photoURL }} style={styles.avatar} />
-          ) : (
-            <View style={[styles.avatar, { backgroundColor: theme.colors.primarySoft }]}>
-              <Text style={[styles.avatarText, { color: theme.colors.primary }]}>
-                {(profile?.displayName || 'C').slice(0, 1).toUpperCase()}
-              </Text>
-            </View>
-          )}
+          <Image
+            source={
+              profile?.photoURL
+                ? { uri: profile.photoURL }
+                : getProfilePlaceholder(profile)
+            }
+            style={styles.avatar}
+          />
         </View>
         <Text style={styles.bannerTitle}>{profile?.displayName || 'Profil'}</Text>
         <Text style={styles.bannerSubtitle}>
@@ -115,10 +115,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 3,
     borderColor: '#FFFFFF',
-  },
-  avatarText: {
-    fontSize: 34,
-    fontWeight: '900',
   },
   bannerTitle: {
     color: '#FFFFFF',

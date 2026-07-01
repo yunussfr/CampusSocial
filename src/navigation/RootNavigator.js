@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ROUTES } from '../constants/routes';
@@ -27,6 +27,8 @@ import { ProfileScreen } from '../screens/profile/ProfileScreen';
 import { UserProfileScreen } from '../screens/profile/UserProfileScreen';
 import { NotificationsScreen } from '../screens/settings/NotificationsScreen';
 import { SettingsScreen } from '../screens/settings/SettingsScreen';
+import { ICONS } from '../constants/assets';
+import { IconButton } from '../components/ui/IconButton';
 
 const AuthStack = createNativeStackNavigator();
 const EventsStack = createNativeStackNavigator();
@@ -92,6 +94,11 @@ function EventsNavigator() {
         component={CreateEventScreen}
         options={{ title: 'Etkinlik Olustur' }}
       />
+      <EventsStack.Screen
+        name={ROUTES.NOTIFICATIONS}
+        component={NotificationsScreen}
+        options={{ title: 'Bildirimler' }}
+      />
     </EventsStack.Navigator>
   );
 }
@@ -117,6 +124,11 @@ function CommunitiesNavigator() {
       <CommunitiesStack.Screen
         name={ROUTES.POST_DETAIL}
         component={PostDetailScreen}
+      />
+      <CommunitiesStack.Screen
+        name={ROUTES.NOTIFICATIONS}
+        component={NotificationsScreen}
+        options={{ title: 'Bildirimler' }}
       />
     </CommunitiesStack.Navigator>
   );
@@ -152,6 +164,11 @@ function MarketNavigator() {
         component={ChatDetailScreen}
         options={{ title: 'Chat' }}
       />
+      <MarketStack.Screen
+        name={ROUTES.NOTIFICATIONS}
+        component={NotificationsScreen}
+        options={{ title: 'Bildirimler' }}
+      />
     </MarketStack.Navigator>
   );
 }
@@ -170,6 +187,11 @@ function ChatNavigator() {
         name={ROUTES.CHAT_DETAIL}
         component={ChatDetailScreen}
         options={{ title: 'Chat' }}
+      />
+      <ChatStack.Screen
+        name={ROUTES.NOTIFICATIONS}
+        component={NotificationsScreen}
+        options={{ title: 'Bildirimler' }}
       />
     </ChatStack.Navigator>
   );
@@ -233,27 +255,42 @@ function MainTabs() {
       <Tab.Screen
         name="EventsTab"
         component={EventsNavigator}
-        options={{ title: 'Discover', tabBarIcon: TabDot }}
+        options={{
+          title: 'Discover',
+          tabBarIcon: DiscoverTabIcon,
+        }}
       />
       <Tab.Screen
         name="CommunitiesTab"
         component={CommunitiesNavigator}
-        options={{ title: 'Community', tabBarIcon: TabDot }}
+        options={{
+          title: 'Community',
+          tabBarIcon: CommunityTabIcon,
+        }}
       />
       <Tab.Screen
         name="MarketTab"
         component={MarketNavigator}
-        options={{ title: 'Market', tabBarIcon: TabDot }}
+        options={{
+          title: 'Market',
+          tabBarIcon: MarketTabIcon,
+        }}
       />
       <Tab.Screen
         name="ChatTab"
         component={ChatNavigator}
-        options={{ title: 'Messages', tabBarIcon: TabDot }}
+        options={{
+          title: 'Messages',
+          tabBarIcon: MessagesTabIcon,
+        }}
       />
       <Tab.Screen
         name="ProfileTab"
         component={ProfileNavigator}
-        options={{ title: 'Profile', tabBarIcon: TabDot }}
+        options={{
+          title: 'Profile',
+          tabBarIcon: ProfileTabIcon,
+        }}
       />
     </Tab.Navigator>
   );
@@ -262,7 +299,7 @@ function MainTabs() {
 function useStackOptions() {
   const { theme } = useTheme();
 
-  return {
+  return ({ navigation, route }) => ({
     headerStyle: {
       backgroundColor: theme.colors.background,
     },
@@ -276,18 +313,50 @@ function useStackOptions() {
     contentStyle: {
       backgroundColor: theme.colors.background,
     },
-  };
+    headerRight:
+      route.name === ROUTES.NOTIFICATIONS
+        ? undefined
+        : () => (
+            <IconButton
+              accessibilityLabel="Bildirimler"
+              icon={ICONS.bell}
+              onPress={() => navigation.navigate(ROUTES.NOTIFICATIONS)}
+              size={22}
+              style={styles.headerBell}
+              tintColor={theme.colors.primary}
+            />
+          ),
+  });
 }
 
-function TabDot({ color, focused }) {
+function DiscoverTabIcon(props) {
+  return <TabAssetIcon {...props} icon={ICONS.tabDiscover} />;
+}
+
+function CommunityTabIcon(props) {
+  return <TabAssetIcon {...props} icon={ICONS.tabCommunity} />;
+}
+
+function MarketTabIcon(props) {
+  return <TabAssetIcon {...props} icon={ICONS.tabMarket} />;
+}
+
+function MessagesTabIcon(props) {
+  return <TabAssetIcon {...props} icon={ICONS.tabMessages} />;
+}
+
+function ProfileTabIcon(props) {
+  return <TabAssetIcon {...props} icon={ICONS.tabProfile} />;
+}
+
+function TabAssetIcon({ color, focused, icon }) {
   return (
-    <View
+    <Image
+      source={icon}
       style={[
         styles.tabIcon,
-        {
-          borderColor: color,
-          backgroundColor: focused ? color : 'transparent',
-        },
+        focused ? styles.tabIconFocused : styles.tabIconDimmed,
+        { tintColor: color },
       ]}
     />
   );
@@ -324,10 +393,18 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     fontWeight: '600',
   },
+  headerBell: {
+    marginRight: 4,
+  },
   tabIcon: {
-    width: 18,
-    height: 18,
-    borderRadius: 999,
-    borderWidth: 2,
+    width: 24,
+    height: 24,
+    resizeMode: 'contain',
+  },
+  tabIconFocused: {
+    opacity: 1,
+  },
+  tabIconDimmed: {
+    opacity: 0.58,
   },
 });
