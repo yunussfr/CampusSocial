@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import {
   FlatList,
+  Image,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { AppInput } from '../../components/ui/DesignSystem';
+import { ICONS } from '../../constants/assets';
 import { useAuth } from '../../context/AuthContext';
 import { useChats } from '../../context/ChatContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -99,7 +101,11 @@ export function ChatDetailScreen({ route }) {
           disabled={sending}
           onPress={handleSend}
           style={[styles.sendButton, { backgroundColor: theme.colors.primary }]}>
-          <Text style={styles.sendButtonText}>{sending ? '...' : 'Gonder'}</Text>
+          {sending ? (
+            <Text style={styles.sendButtonText}>...</Text>
+          ) : (
+            <Image source={ICONS.send} style={styles.sendIcon} />
+          )}
         </Pressable>
       </View>
     </View>
@@ -141,7 +147,7 @@ const styles = StyleSheet.create({
   sendButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 84,
+    width: 48,
     minHeight: 44,
     borderRadius: 10,
   },
@@ -149,6 +155,12 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
+  },
+  sendIcon: {
+    width: 22,
+    height: 22,
+    resizeMode: 'contain',
+    tintColor: '#FFFFFF',
   },
   emptyText: {
     color: '#64748B',
