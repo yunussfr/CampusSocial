@@ -14,6 +14,7 @@ import {
   SectionHeader,
   StateView,
 } from '../../components/ui/DesignSystem';
+import { ICONS } from '../../constants/assets';
 import { ROUTES } from '../../constants/routes';
 import { useAuth } from '../../context/AuthContext';
 import { useMarket } from '../../context/MarketContext';
@@ -53,7 +54,11 @@ export function MarketHomeScreen({ navigation }) {
         ListHeaderComponent={
           <>
             <PageIntro title="Market" subtitle="Kampus ikinci el ilanlari" />
-            <AppInput editable={false} placeholder="Ilan, kategori veya satici ara..." />
+            <AppInput
+              editable={false}
+              leftIcon={ICONS.search}
+              placeholder="Ilan, kategori veya satici ara..."
+            />
             <ChipRow
               activeItem="Tumu"
               items={['Tumu', 'Kitap', 'Elektronik', 'Giyim', 'Diger']}

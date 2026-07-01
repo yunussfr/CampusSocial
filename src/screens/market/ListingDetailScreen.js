@@ -1,19 +1,15 @@
 import React, { useState } from 'react';
-import {
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
+import { AppButton, Card, Screen, StateView } from '../../components/ui/DesignSystem';
 import { ROUTES } from '../../constants/routes';
 import { useAuth } from '../../context/AuthContext';
 import { useChats } from '../../context/ChatContext';
 import { useMarket } from '../../context/MarketContext';
+import { useTheme } from '../../context/ThemeContext';
 
 export function ListingDetailScreen({ navigation }) {
   const { profile, user } = useAuth();
+  const { theme } = useTheme();
   const { startDirectChat } = useChats();
   const { saveSelectedListing, selectedListing } = useMarket();
   const [saving, setSaving] = useState(false);
@@ -23,9 +19,9 @@ export function ListingDetailScreen({ navigation }) {
 
   if (!listing) {
     return (
-      <View style={styles.centerContent}>
-        <Text style={styles.mutedText}>Ilan bulunamadi.</Text>
-      </View>
+      <Screen>
+        <StateView empty title="Ilan bulunamadi." />
+      </Screen>
     );
   }
 
@@ -66,116 +62,85 @@ export function ListingDetailScreen({ navigation }) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      {listing.imageURLs?.[0] ? (
-        <Image source={{ uri: listing.imageURLs[0] }} style={styles.heroImage} />
-      ) : null}
-      <Text style={styles.title}>{listing.title}</Text>
-      <Text style={styles.price}>
-        {listing.price} {listing.currency || 'TRY'}
-      </Text>
-      <Text style={styles.meta}>
-        {listing.category} - {listing.condition || 'used'}
-      </Text>
-      <Text style={styles.description}>{listing.description}</Text>
-      <Text style={styles.seller}>
-        Satici: {listing.seller?.displayName || 'Bilinmeyen kullanici'}
-      </Text>
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
-      <Pressable onPress={handleSave} disabled={saving} style={styles.secondaryButton}>
-        <Text style={styles.secondaryButtonText}>
-          {saving ? 'Kaydediliyor...' : 'Ilani Kaydet'}
+    <Screen scroll style={styles.container}>
+      <View style={[styles.hero, { backgroundColor: theme.colors.primarySoft }]}>
+        {listing.imageURLs?.[0] ? (
+          <Image source={{ uri: listing.imageURLs[0] }} style={styles.heroImage} />
+        ) : null}
+      </View>
+      <Card style={styles.card}>
+        <Text style={[styles.title, { color: theme.colors.text }]}>{listing.title}</Text>
+        <Text style={[styles.price, { color: theme.colors.primary }]}>
+          {listing.price} {listing.currency || 'TRY'}
         </Text>
-      </Pressable>
+        <Text style={[styles.meta, { color: theme.colors.subtleText }]}>
+          {listing.category} - {listing.condition || 'used'} - {listing.status || 'active'}
+        </Text>
+        <Text style={[styles.description, { color: theme.colors.mutedText }]}>
+          {listing.description}
+        </Text>
+      </Card>
+      <Card style={styles.card}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Satici</Text>
+        <Text style={[styles.seller, { color: theme.colors.mutedText }]}>
+          {listing.seller?.displayName || 'Bilinmeyen kullanici'}
+        </Text>
+      </Card>
+      <StateView error={error} />
+      <AppButton disabled={saving} onPress={handleSave} variant="secondary">
+        {saving ? 'Kaydediliyor...' : 'Ilani Kaydet'}
+      </AppButton>
       {listing.sellerId !== user.uid ? (
-        <Pressable
-          onPress={handleMessageSeller}
-          disabled={startingChat}
-          style={styles.primaryButton}>
-          <Text style={styles.primaryButtonText}>
-            {startingChat ? 'Chat aciliyor...' : 'Saticiya Mesaj At'}
-          </Text>
-        </Pressable>
+        <AppButton disabled={startingChat} onPress={handleMessageSeller}>
+          {startingChat ? 'Chat aciliyor...' : 'Saticiya Mesaj At'}
+        </AppButton>
       ) : null}
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  centerContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    backgroundColor: '#F8FAFC',
-  },
   container: {
-    gap: 12,
-    padding: 24,
-    backgroundColor: '#F8FAFC',
+    gap: 14,
+  },
+  hero: {
+    height: 260,
+    borderRadius: 16,
+    overflow: 'hidden',
   },
   heroImage: {
     width: '100%',
-    height: 220,
-    borderRadius: 12,
-    backgroundColor: '#E2E8F0',
+    height: '100%',
+  },
+  card: {
+    gap: 8,
+    padding: 16,
   },
   title: {
-    color: '#0B1C30',
-    fontSize: 28,
-    fontWeight: '800',
+    fontSize: 26,
+    lineHeight: 32,
+    fontWeight: '900',
   },
   price: {
-    color: '#004AC6',
     fontSize: 22,
-    fontWeight: '800',
+    lineHeight: 28,
+    fontWeight: '900',
+  },
+  meta: {
+    fontSize: 13,
+    lineHeight: 18,
   },
   description: {
-    color: '#334155',
     fontSize: 15,
     lineHeight: 22,
   },
-  meta: {
-    color: '#64748B',
-    fontSize: 14,
+  sectionTitle: {
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: '800',
   },
   seller: {
-    color: '#0B1C30',
     fontSize: 15,
-    fontWeight: '700',
-  },
-  primaryButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-    borderRadius: 10,
-    backgroundColor: '#004AC6',
-  },
-  secondaryButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 10,
-    backgroundColor: '#FFFFFF',
-  },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  secondaryButtonText: {
-    color: '#004AC6',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  mutedText: {
-    color: '#64748B',
-    fontSize: 15,
-  },
-  errorText: {
-    color: '#DC2626',
-    fontSize: 14,
+    lineHeight: 22,
   },
 });
