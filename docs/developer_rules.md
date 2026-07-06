@@ -307,7 +307,8 @@ Yapilacaklar:
 Bu fazin cikti kontrolu:
 
 - Mock tasarimdan kalan gecici ekran gorunumu kalmamali.
-- Her ekran Figma'daki karsiligina aynısı olmalı.
+
+- Her ekran Figma'daki karsiligina benzemeli.
 - Her ekranin bos ve hata durumu olmali.
 - Dark mode bozuk gorunmemeli.
 
