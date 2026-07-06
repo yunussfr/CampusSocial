@@ -10,6 +10,21 @@ import {
   View,
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
+
+const COMMUNITY_CATEGORIES = [
+  'Akademik ve Bölüm',
+  'Teknoloji ve Yazılım',
+  'Kariyer ve Girişimcilik',
+  'Kültür ve Sanat',
+  'Spor',
+  'Sosyal ve Hobi',
+  'Gönüllülük',
+  'Dil ve Uluslararası',
+  'Bilim ve Araştırma',
+  'Medya ve İletişim',
+  'Mezuniyet ve Networking',
+  'Diğer',
+];
 import { useAuth } from '../../context/AuthContext';
 import { useCommunities } from '../../context/CommunityContext';
 import {
@@ -23,6 +38,7 @@ export function CreateCommunityScreen({ navigation }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
+  const [showCategories, setShowCategories] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
   const [coverAsset, setCoverAsset] = useState(null);
   const [iconAsset, setIconAsset] = useState(null);
@@ -114,14 +130,42 @@ export function CreateCommunityScreen({ navigation }) {
         style={[styles.input, styles.multilineInput]}
         value={description}
       />
-      <TextInput
-        autoCorrect={false}
-        onChangeText={setCategory}
-        placeholder="Kategori"
-        spellCheck={false}
-        style={styles.input}
-        value={category}
-      />
+      <Pressable
+        onPress={() => setShowCategories(prev => !prev)}
+        style={[styles.input, styles.categorySelector]}>
+        <Text style={[
+          styles.categorySelectorText,
+          !category && styles.categoryPlaceholder,
+        ]}>
+          {category || 'Kategori seç'}
+        </Text>
+        <Text style={styles.categoryArrow}>
+          {showCategories ? '▲' : '▼'}
+        </Text>
+      </Pressable>
+      {showCategories ? (
+        <View style={styles.categoryDropdown}>
+          {COMMUNITY_CATEGORIES.map(cat => (
+            <Pressable
+              key={cat}
+              onPress={() => {
+                setCategory(cat);
+                setShowCategories(false);
+              }}
+              style={[
+                styles.categoryOption,
+                category === cat && styles.categoryOptionActive,
+              ]}>
+              <Text style={[
+                styles.categoryOptionText,
+                category === cat && styles.categoryOptionTextActive,
+              ]}>
+                {cat}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
       <View style={styles.switchRow}>
         <Text style={styles.switchLabel}>Private topluluk</Text>
         <Switch onValueChange={setIsPrivate} value={isPrivate} />
@@ -188,6 +232,51 @@ const styles = StyleSheet.create({
     minHeight: 110,
     paddingTop: 12,
     textAlignVertical: 'top',
+  },
+  categorySelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    minHeight: 48,
+  },
+  categorySelectorText: {
+    fontSize: 14,
+    color: '#0B1C30',
+    flex: 1,
+  },
+  categoryPlaceholder: {
+    color: '#94A3B8',
+  },
+  categoryArrow: {
+    fontSize: 11,
+    color: '#64748B',
+    marginLeft: 8,
+  },
+  categoryDropdown: {
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+    marginTop: -8,
+  },
+  categoryOption: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  categoryOptionActive: {
+    backgroundColor: '#EEF4FF',
+  },
+  categoryOptionText: {
+    fontSize: 14,
+    color: '#334155',
+  },
+  categoryOptionTextActive: {
+    color: '#004AC6',
+    fontWeight: '700',
   },
   switchRow: {
     minHeight: 48,
