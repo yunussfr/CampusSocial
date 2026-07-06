@@ -6,6 +6,7 @@ export const ICONS = {
   search: require('../assets/icons/search.png'),
   send: require('../assets/icons/send.png'),
   tabCommunity: require('../assets/icons/tab-community.png'),
+  tabHub: require('../assets/icons/Hub.png'),
   tabDiscover: require('../assets/icons/tab-discover.png'),
   tabMarket: require('../assets/icons/tab-market.png'),
   tabMessages: require('../assets/icons/tab-messages.png'),
@@ -16,6 +17,7 @@ export const IMAGES = {
   coverPlaceholder: require('../assets/images/default_community_or_event_cover_photo_placeholder.png'),
   profileManPlaceholder: require('../assets/images/default_user_profile_avatar_forMan_placeholder.png'),
   profileWomanPlaceholder: require('../assets/images/default_user_profile_avatar_forWoman_placeholder.png'),
+  brandLogo: require('../assets/images/campus-vibe-logo.png'),
 };
 
 export function getProfilePlaceholder(profile) {
