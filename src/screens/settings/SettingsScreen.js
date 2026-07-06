@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
-  AppButton,
   Card,
-  PageIntro,
   Screen,
   SectionHeader,
 } from '../../components/ui/DesignSystem';
@@ -28,61 +26,80 @@ export function SettingsScreen() {
 
   return (
     <Screen scroll style={styles.container}>
-      <PageIntro title="Ayarlar" subtitle="Gorunum, bildirim ve hesap tercihleri." />
-      {message ? <Text style={[styles.message, { color: theme.colors.success }]}>{message}</Text> : null}
+      {/* Header */}
+      <View style={styles.pageHeader}>
+        <Text style={[styles.pageTitle, { color: theme.colors.text }]}>Ayarlar</Text>
+        <Text style={[styles.pageSubtitle, { color: theme.colors.mutedText }]}>
+          Gorunum, bildirim ve hesap tercihleri.
+        </Text>
+      </View>
+
+      {message ? (
+        <View style={[styles.messageBanner, { backgroundColor: '#DCFCE7', borderColor: '#86EFAC' }]}>
+          <Text style={{ color: '#15803D', fontSize: 14, fontWeight: '600' }}>✓ {message}</Text>
+        </View>
+      ) : null}
 
       <SectionHeader title="Gorunum" />
       <Card style={styles.card}>
         <SettingRow
-          icon={ICONS.calendar}
+          iconEmoji="🎨"
+          iconColor="#8B5CF6"
           label="Tema"
+          description={mode === 'dark' ? 'Koyu mod aktif' : 'Acik mod aktif'}
           onPress={toggleTheme}
-          value={mode === 'dark' ? 'Dark' : 'Light'}
+          value={mode === 'dark' ? '🌙 Dark' : '☀️ Light'}
         />
       </Card>
 
       <SectionHeader title="Bildirimler" />
       <Card style={styles.card}>
         <SettingRow
-          icon={ICONS.bell}
-          label="FCM bildirimleri"
+          iconEmoji="🔔"
+          iconColor="#F59E0B"
+          label="FCM Bildirimleri"
+          description="Push bildirimleri etkinlestir"
           onPress={handleEnableNotifications}
           value="Ac"
+          valueColor="#16A34A"
         />
         <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
         <SettingRow
-          icon={ICONS.location}
-          label="Bildirim tokeni"
+          iconEmoji="🔕"
+          iconColor="#64748B"
+          label="Bildirim Tokeni"
+          description="Bildirimleri devre disi birak"
           onPress={handleDisableNotifications}
           value="Kapat"
+          valueColor="#DC2626"
         />
       </Card>
 
       <SectionHeader title="Hesap" />
-      <AppButton onPress={logout} style={styles.logoutButton} variant="danger">
+      <Pressable onPress={logout} style={styles.logoutButton}>
         <Image source={ICONS.logout} style={styles.logoutIcon} />
         <Text style={styles.logoutText}>Cikis Yap</Text>
-      </AppButton>
+      </Pressable>
     </Screen>
   );
 }
 
-function SettingRow({ icon, label, value, onPress }) {
+function SettingRow({ iconEmoji, iconColor, label, description, value, onPress, valueColor }) {
   const { theme } = useTheme();
 
   return (
     <Pressable onPress={onPress} style={styles.row}>
-      <View style={styles.rowLabelWrap}>
-        {icon ? (
-          <Image
-            source={icon}
-            style={[styles.rowIcon, { tintColor: theme.colors.primary }]}
-          />
-        ) : null}
-        <Text style={[styles.rowLabel, { color: theme.colors.text }]}>{label}</Text>
+      <View style={[styles.iconBox, { backgroundColor: iconColor + '22' }]}>
+        <Text style={styles.iconEmoji}>{iconEmoji}</Text>
       </View>
-      <View style={[styles.toggle, { backgroundColor: theme.colors.primarySoft }]}>
-        <Text style={[styles.toggleText, { color: theme.colors.primary }]}>{value}</Text>
+      <View style={styles.rowLabelWrap}>
+        <Text style={[styles.rowLabel, { color: theme.colors.text }]}>{label}</Text>
+        {description ? (
+          <Text style={[styles.rowDesc, { color: theme.colors.subtleText }]}>{description}</Text>
+        ) : null}
+      </View>
+      <View style={[styles.toggle, { backgroundColor: (valueColor || theme.colors.primary) + '18' }]}>
+        <Text style={[styles.toggleText, { color: valueColor || theme.colors.primary }]}>{value}</Text>
       </View>
     </Pressable>
   );
@@ -92,36 +109,55 @@ const styles = StyleSheet.create({
   container: {
     gap: 10,
   },
-  message: {
-    fontSize: 14,
-    lineHeight: 20,
+  pageHeader: {
+    gap: 4,
+    marginBottom: 4,
+  },
+  pageTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  pageSubtitle: {
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  messageBanner: {
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
   },
   card: {
     paddingHorizontal: 16,
   },
   row: {
-    minHeight: 58,
+    minHeight: 64,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 12,
+  },
+  iconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  iconEmoji: {
+    fontSize: 20,
   },
   rowLabelWrap: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingRight: 12,
-  },
-  rowIcon: {
-    width: 22,
-    height: 22,
-    resizeMode: 'contain',
+    gap: 2,
   },
   rowLabel: {
-    flexShrink: 1,
     fontSize: 16,
-    lineHeight: 22,
     fontWeight: '700',
+  },
+  rowDesc: {
+    fontSize: 12,
+    fontWeight: '500',
   },
   toggle: {
     minWidth: 74,
@@ -133,15 +169,20 @@ const styles = StyleSheet.create({
   },
   toggleText: {
     fontSize: 13,
-    lineHeight: 18,
     fontWeight: '800',
   },
   divider: {
     height: 1,
+    marginLeft: 54,
   },
   logoutButton: {
+    minHeight: 54,
+    borderRadius: 14,
+    backgroundColor: '#DC2626',
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
   },
   logoutIcon: {
     width: 20,
@@ -152,7 +193,6 @@ const styles = StyleSheet.create({
   logoutText: {
     color: '#FFFFFF',
     fontSize: 16,
-    lineHeight: 24,
     fontWeight: '800',
   },
 });

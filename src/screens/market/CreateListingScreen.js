@@ -6,7 +6,24 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  View,
 } from 'react-native';
+
+const LISTING_CATEGORIES = [
+  'Kitap ve Ders Materyali',
+  'Kırtasiye',
+  'Bilgisayar ve Teknoloji',
+  'Telefon ve Aksesuar',
+  'Elektronik',
+  'Giyim ve Aksesuar',
+  'Yurt ve Ev Eşyası',
+  'Spor ve Kamp',
+  'Müzik Aletleri',
+  'Hobi ve Oyun',
+  'El Yapımı Ürünler',
+  'Ücretsþz ve Bağış',
+  'Diğer',
+];
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useAuth } from '../../context/AuthContext';
 import { useMarket } from '../../context/MarketContext';
@@ -19,6 +36,7 @@ export function CreateListingScreen({ navigation }) {
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
   const [category, setCategory] = useState('');
+  const [showCategories, setShowCategories] = useState(false);
   const [condition, setCondition] = useState('used');
   const [assets, setAssets] = useState([]);
   const [submitting, setSubmitting] = useState(false);
@@ -108,14 +126,42 @@ export function CreateListingScreen({ navigation }) {
         style={styles.input}
         value={price}
       />
-      <TextInput
-        autoCorrect={false}
-        onChangeText={setCategory}
-        placeholder="Kategori"
-        spellCheck={false}
-        style={styles.input}
-        value={category}
-      />
+      <Pressable
+        onPress={() => setShowCategories(prev => !prev)}
+        style={[styles.input, styles.categorySelector]}>
+        <Text style={[
+          styles.categorySelectorText,
+          !category && styles.categoryPlaceholder,
+        ]}>
+          {category || 'Kategori seç'}
+        </Text>
+        <Text style={styles.categoryArrow}>
+          {showCategories ? '▲' : '▼'}
+        </Text>
+      </Pressable>
+      {showCategories ? (
+        <View style={styles.categoryDropdown}>
+          {LISTING_CATEGORIES.map(cat => (
+            <Pressable
+              key={cat}
+              onPress={() => {
+                setCategory(cat);
+                setShowCategories(false);
+              }}
+              style={[
+                styles.categoryOption,
+                category === cat && styles.categoryOptionActive,
+              ]}>
+              <Text style={[
+                styles.categoryOptionText,
+                category === cat && styles.categoryOptionTextActive,
+              ]}>
+                {cat}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
       <TextInput
         autoCorrect={false}
         onChangeText={setCondition}
@@ -174,6 +220,51 @@ const styles = StyleSheet.create({
     minHeight: 110,
     paddingTop: 12,
     textAlignVertical: 'top',
+  },
+  categorySelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    minHeight: 48,
+  },
+  categorySelectorText: {
+    fontSize: 14,
+    color: '#0B1C30',
+    flex: 1,
+  },
+  categoryPlaceholder: {
+    color: '#94A3B8',
+  },
+  categoryArrow: {
+    fontSize: 11,
+    color: '#64748B',
+    marginLeft: 8,
+  },
+  categoryDropdown: {
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+    marginTop: -8,
+  },
+  categoryOption: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  categoryOptionActive: {
+    backgroundColor: '#EEF4FF',
+  },
+  categoryOptionText: {
+    fontSize: 14,
+    color: '#334155',
+  },
+  categoryOptionTextActive: {
+    color: '#004AC6',
+    fontWeight: '700',
   },
   preview: {
     width: '100%',

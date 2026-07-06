@@ -20,10 +20,11 @@ async function updateDocument(path, data) {
 exports.onEventJoin = onDocumentCreated(
   'events/{eventId}/attendees/{userId}',
   async event => {
-    const { eventId } = event.params;
+    const { eventId, userId } = event.params;
 
     await updateDocument(`events/${eventId}`, {
       attendeeCount: incrementBy(1),
+      attendeeIds: fieldValue.arrayUnion(userId),
       updatedAt: fieldValue.serverTimestamp(),
     });
   },
@@ -32,10 +33,11 @@ exports.onEventJoin = onDocumentCreated(
 exports.onEventLeave = onDocumentDeleted(
   'events/{eventId}/attendees/{userId}',
   async event => {
-    const { eventId } = event.params;
+    const { eventId, userId } = event.params;
 
     await updateDocument(`events/${eventId}`, {
       attendeeCount: incrementBy(-1),
+      attendeeIds: fieldValue.arrayRemove(userId),
       updatedAt: fieldValue.serverTimestamp(),
     });
   },
@@ -44,10 +46,11 @@ exports.onEventLeave = onDocumentDeleted(
 exports.onCommunityJoin = onDocumentCreated(
   'communities/{communityId}/members/{userId}',
   async event => {
-    const { communityId } = event.params;
+    const { communityId, userId } = event.params;
 
     await updateDocument(`communities/${communityId}`, {
       memberCount: incrementBy(1),
+      memberIds: fieldValue.arrayUnion(userId),
       updatedAt: fieldValue.serverTimestamp(),
     });
   },
@@ -56,10 +59,11 @@ exports.onCommunityJoin = onDocumentCreated(
 exports.onCommunityLeave = onDocumentDeleted(
   'communities/{communityId}/members/{userId}',
   async event => {
-    const { communityId } = event.params;
+    const { communityId, userId } = event.params;
 
     await updateDocument(`communities/${communityId}`, {
       memberCount: incrementBy(-1),
+      memberIds: fieldValue.arrayRemove(userId),
       updatedAt: fieldValue.serverTimestamp(),
     });
   },

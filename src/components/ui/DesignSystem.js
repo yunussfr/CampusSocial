@@ -10,31 +10,57 @@ import {
   View,
 } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
+import {AnimatedBrandLogo} from './AnimatedBrandLogo';
 
-export function Screen({ children, scroll = false, padded = true, style }) {
-  const { theme } = useTheme();
-  const contentStyle = [
-    styles.screen,
-    { backgroundColor: theme.colors.background },
-    padded && { paddingHorizontal: theme.spacing.screen },
-    style,
-  ];
+export function Screen({
+  children,
+  scroll = false,
+  padded = true,
+  style,
+}) {
+  const {theme} = useTheme();
+
+  const backgroundStyle = {
+    backgroundColor: theme.colors.background,
+  };
+
+  const paddingStyle = padded
+    ? {paddingHorizontal: theme.spacing.screen}
+    : null;
 
   if (scroll) {
     return (
       <ScrollView
-        contentContainerStyle={contentStyle}
+        style={[styles.screenRoot, backgroundStyle]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          paddingStyle,
+          style,
+        ]}
         keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+      >
         {children}
       </ScrollView>
     );
   }
 
-  return <View style={contentStyle}>{children}</View>;
+  return (
+    <View
+      style={[
+        styles.screenRoot,
+        styles.screenContent,
+        backgroundStyle,
+        paddingStyle,
+        style,
+      ]}
+    >
+      {children}
+    </View>
+  );
 }
 
-export function BrandHeader({ title = 'CampusVibe', action, subtitle }) {
+export function BrandHeader({ title = 'CampusMerge', action, subtitle,onLogoPress, }) {
   const { theme } = useTheme();
 
   return (
@@ -48,7 +74,6 @@ export function BrandHeader({ title = 'CampusVibe', action, subtitle }) {
         },
       ]}>
       <View style={styles.brandLeft}>
-        <View style={[styles.logoRing, { borderColor: theme.colors.primary }]} />
         <View>
           <Text style={[styles.brandTitle, { color: theme.colors.primary }]}>
             {title}
@@ -60,7 +85,11 @@ export function BrandHeader({ title = 'CampusVibe', action, subtitle }) {
           ) : null}
         </View>
       </View>
-      {action}
+        <View style={styles.brandRight}>
+        {action}
+
+        <AnimatedBrandLogo onPress={onLogoPress} />
+      </View>
     </View>
   );
 }
@@ -140,17 +169,32 @@ export function AppButton({ children, onPress, disabled, variant = 'primary', st
   );
 }
 
-export function AppInput({ leftIcon, leftIconTintColor, ...props }) {
+export function AppInput({ leftIcon, leftIconTintColor, rightIcon, rightIconTintColor, ...props }) {
   const { theme } = useTheme();
 
   return (
     <View style={[styles.inputShell, props.style]}>
       {leftIcon ? (
+        React.isValidElement(leftIcon) ? (
+          <View style={[styles.inputIcon, { justifyContent: 'center', alignItems: 'center' }]}>
+            {leftIcon}
+          </View>
+        ) : (
+          <Image
+            source={leftIcon}
+            style={[
+              styles.inputIcon,
+              leftIconTintColor ? { tintColor: leftIconTintColor } : undefined,
+            ]}
+          />
+        )
+      ) : null}
+      {rightIcon ? (
         <Image
-          source={leftIcon}
+          source={rightIcon}
           style={[
-            styles.inputIcon,
-            { tintColor: leftIconTintColor || theme.colors.subtleText },
+            styles.inputIconRight,
+            rightIconTintColor ? { tintColor: rightIconTintColor } : undefined,
           ]}
         />
       ) : null}
@@ -164,7 +208,8 @@ export function AppInput({ leftIcon, leftIconTintColor, ...props }) {
             borderColor: theme.colors.border,
             color: theme.colors.text,
           },
-          leftIcon && styles.inputWithIcon,
+          leftIcon && styles.inputWithLeftIcon,
+          rightIcon && styles.inputWithRightIcon,
           props.multiline && styles.multilineInput,
         ]}
       />
@@ -172,7 +217,7 @@ export function AppInput({ leftIcon, leftIconTintColor, ...props }) {
   );
 }
 
-export function ChipRow({ items, activeItem, onPress }) {
+export function ChipRow({ items, activeItem, onPress, onItemPress }) {
   return (
     <ScrollView
       horizontal
@@ -183,7 +228,10 @@ export function ChipRow({ items, activeItem, onPress }) {
           active={item === activeItem}
           key={item}
           label={item}
-          onPress={() => onPress?.(item)}
+          onPress={() => {
+            onPress?.(item);
+            onItemPress?.(item);
+          }}
         />
       ))}
     </ScrollView>
@@ -287,11 +335,26 @@ export const designTokens = {
 };
 
 const styles = StyleSheet.create({
-  screen: {
-    flexGrow: 1,
-    paddingBottom: 112,
-    paddingTop: 24,
-  },
+  brandRight: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 10,
+},
+
+  screenRoot: {
+  flex: 1,
+},
+
+scrollContent: {
+  flexGrow: 1,
+  paddingTop: 24,
+  paddingBottom: 140,
+},
+
+screenContent: {
+  paddingTop: 24,
+  paddingBottom: 140,
+},
   brandHeader: {
     minHeight: 64,
     paddingHorizontal: 16,
@@ -382,6 +445,15 @@ const styles = StyleSheet.create({
     height: 22,
     resizeMode: 'contain',
   },
+  inputIconRight: {
+    position: 'absolute',
+    right: 16,
+    top: 15,
+    zIndex: 1,
+    width: 22,
+    height: 22,
+    resizeMode: 'contain',
+  },
   input: {
     minHeight: 54,
     paddingHorizontal: 17,
@@ -395,8 +467,11 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
-  inputWithIcon: {
+  inputWithLeftIcon: {
     paddingLeft: 48,
+  },
+  inputWithRightIcon: {
+    paddingRight: 48,
   },
   multilineInput: {
     minHeight: 112,

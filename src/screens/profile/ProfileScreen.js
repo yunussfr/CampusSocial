@@ -1,7 +1,7 @@
 import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppButton, Card, Screen } from '../../components/ui/DesignSystem';
-import { getProfilePlaceholder } from '../../constants/assets';
+import { getProfilePlaceholder, IMAGES } from '../../constants/assets';
 import { ROUTES } from '../../constants/routes';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -66,11 +66,6 @@ export function ProfileScreen({ navigation }) {
         <AppButton onPress={() => navigation.navigate(ROUTES.EDIT_PROFILE)}>
           Profili Duzenle
         </AppButton>
-        <AppButton
-          onPress={() => navigation.navigate(ROUTES.NOTIFICATIONS)}
-          variant="secondary">
-          Bildirimler
-        </AppButton>
         <AppButton onPress={() => navigation.navigate(ROUTES.SETTINGS)} variant="secondary">
           Ayarlar
         </AppButton>
@@ -93,7 +88,23 @@ function Stat({ label, value }) {
 const styles = StyleSheet.create({
   container: {
     gap: 16,
-    paddingTop: 24,
+    paddingTop: 8,
+  },
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  brandLogo: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   banner: {
     alignItems: 'center',

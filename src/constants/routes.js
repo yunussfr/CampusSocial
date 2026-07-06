@@ -3,6 +3,7 @@ export const ROUTES = {
   REGISTER: 'Register',
   FORGOT_PASSWORD: 'ForgotPassword',
   PROFILE_COMPLETION: 'ProfileCompletion',
+  HUB: 'Hub',
   DISCOVER: 'Discover',
   EVENT_DETAIL: 'EventDetail',
   CREATE_EVENT: 'CreateEvent',
@@ -21,4 +22,6 @@ export const ROUTES = {
   USER_PROFILE: 'UserProfile',
   SETTINGS: 'Settings',
   NOTIFICATIONS: 'Notifications',
+  MY_EVENTS: 'MyEvents',
+  MY_COMMUNITIES: 'MyCommunities',
 };

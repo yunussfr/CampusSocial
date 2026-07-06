@@ -8,7 +8,6 @@ export function IconButton({
   onPress,
   size = 24,
   style,
-  tintColor,
 }) {
   const { theme } = useTheme();
 
@@ -31,7 +30,6 @@ export function IconButton({
           styles.icon,
           {
             height: size,
-            tintColor: tintColor || theme.colors.text,
             width: size,
           },
         ]}

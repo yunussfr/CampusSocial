@@ -13,9 +13,26 @@ export function subscribeToChats({ userId, onData, onError }) {
   return firestoreDb
     .collection(COLLECTIONS.CHATS)
     .where('participants', 'array-contains', userId)
-    .orderBy('updatedAt', 'desc')
     .onSnapshot(
-      snapshot => onData(snapshot.docs.map(mapDoc)),
+      snapshot => {
+        const chats = snapshot.docs.map(mapDoc);
+        chats.sort((a, b) => {
+          let aTime = 0;
+          let bTime = 0;
+          if (a.updatedAt) {
+            aTime = typeof a.updatedAt.toDate === 'function' 
+              ? a.updatedAt.toDate().getTime() 
+              : new Date(a.updatedAt).getTime() || 0;
+          }
+          if (b.updatedAt) {
+            bTime = typeof b.updatedAt.toDate === 'function' 
+              ? b.updatedAt.toDate().getTime() 
+              : new Date(b.updatedAt).getTime() || 0;
+          }
+          return bTime - aTime;
+        });
+        onData(chats);
+      },
       error => {
         if (onError) {
           onError(error);
