@@ -62,42 +62,23 @@ function getLocation(event) {
   );
 }
 
-function getCommunityName(event) {
-  return (
-    event?.communityName ||
-    event?.community?.name ||
-    event?.organizerName ||
-    event?.organizer?.name ||
-    'CampusMerge'
-  );
-}
-
-function getDayNumber(event) {
-  const date = getEventDate(event);
-
-  return date
-    ? String(date.getDate()).padStart(2, '0')
-    : '--';
-}
-
-function getMonthName(event) {
+function formatEventDate(event) {
   const date = getEventDate(event);
 
   if (!date) {
-    return '';
+    return event?.dateText || 'Tarih belirtilmedi';
   }
 
   return new Intl.DateTimeFormat('tr-TR', {
-    month: 'short',
-  })
-    .format(date)
-    .replace('.', '')
-    .toUpperCase();
+    day: 'numeric',
+    month: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
 }
 
-function EventCart({
+function PopulerEventCart({
   event,
-  width = 230,
   onPress,
   theme,
 }) {
@@ -116,12 +97,11 @@ function EventCart({
       style={({pressed}) => [
         styles.wrapper,
         {
-          width,
           shadowColor,
-          opacity: pressed ? 0.9 : 1,
+          opacity: pressed ? 0.92 : 1,
           transform: [
             {
-              scale: pressed ? 0.98 : 1,
+              scale: pressed ? 0.99 : 1,
             },
           ],
         },
@@ -135,29 +115,27 @@ function EventCart({
             pointerEvents="none"
             colors={[
               'rgba(15,23,42,0.02)',
-              'rgba(15,23,42,0.18)',
-              'rgba(15,23,42,0.92)',
+              'rgba(15,23,42,0.16)',
+              'rgba(15,23,42,0.94)',
             ]}
-            locations={[0, 0.48, 1]}
+            locations={[0, 0.45, 1]}
             style={StyleSheet.absoluteFillObject}
           />
 
           <View style={styles.topRow}>
-            <View style={styles.categoryBadge}>
-              <Text
-                numberOfLines={1}
-                style={styles.categoryText}>
-                {event.category || 'Etkinlik'}
+            <View style={styles.statusBadge}>
+              <Text style={styles.statusText}>
+                {event.isActive
+                  ? 'AKTİF'
+                  : event.category || 'ETKİNLİK'}
               </Text>
             </View>
 
             <View style={styles.dateBadge}>
-              <Text style={styles.dateDay}>
-                {getDayNumber(event)}
-              </Text>
-
-              <Text style={styles.dateMonth}>
-                {getMonthName(event)}
+              <Text
+                numberOfLines={1}
+                style={styles.dateText}>
+                {formatEventDate(event)}
               </Text>
             </View>
           </View>
@@ -167,12 +145,6 @@ function EventCart({
               numberOfLines={2}
               style={styles.title}>
               {getTitle(event)}
-            </Text>
-
-            <Text
-              numberOfLines={1}
-              style={styles.community}>
-              {getCommunityName(event)}
             </Text>
 
             <Text
@@ -190,28 +162,28 @@ function EventCart({
 const styles = StyleSheet.create({
   wrapper: {
     height: 190,
-    borderRadius: 17,
+    borderRadius: 18,
 
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 5,
     },
-    shadowOpacity: 0.14,
-    shadowRadius: 8,
+    shadowOpacity: 0.16,
+    shadowRadius: 10,
 
-    elevation: 4,
+    elevation: 5,
   },
 
   card: {
     flex: 1,
     overflow: 'hidden',
-    borderRadius: 17,
+    borderRadius: 18,
     backgroundColor: '#E2E8F0',
   },
 
   image: {
     flex: 1,
-    padding: 11,
+    padding: 12,
     justifyContent: 'space-between',
   },
 
@@ -219,72 +191,55 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
+    gap: 10,
   },
 
-  categoryBadge: {
-    maxWidth: '60%',
+  statusBadge: {
+    maxWidth: '38%',
     borderRadius: 7,
     paddingHorizontal: 8,
     paddingVertical: 5,
     backgroundColor: '#2563EB',
   },
 
-  categoryText: {
+  statusText: {
     color: '#FFFFFF',
     fontSize: 9,
-    fontWeight: '800',
+    fontWeight: '900',
+    letterSpacing: 0.3,
   },
 
   dateBadge: {
-    width: 43,
-    overflow: 'hidden',
-    alignItems: 'center',
-    borderRadius: 9,
-    backgroundColor: '#FFFFFF',
+    maxWidth: '62%',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    backgroundColor: 'rgba(15,23,42,0.76)',
   },
 
-  dateDay: {
-    paddingTop: 4,
-    color: '#1E293B',
-    fontSize: 15,
-    fontWeight: '900',
-  },
-
-  dateMonth: {
-    width: '100%',
-    marginTop: 2,
-    paddingVertical: 3,
-    textAlign: 'center',
+  dateText: {
     color: '#FFFFFF',
-    backgroundColor: '#2563EB',
-    fontSize: 8,
-    fontWeight: '900',
+    fontSize: 9,
+    fontWeight: '700',
   },
 
   content: {
-    paddingRight: 8,
+    paddingRight: 14,
   },
 
   title: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 21,
     fontWeight: '900',
-    lineHeight: 21,
-  },
-
-  community: {
-    marginTop: 4,
-    color: '#E2E8F0',
-    fontSize: 11,
-    fontWeight: '700',
+    lineHeight: 26,
   },
 
   location: {
-    marginTop: 4,
-    color: '#CBD5E1',
-    fontSize: 10,
+    marginTop: 5,
+    color: '#E2E8F0',
+    fontSize: 11,
     fontWeight: '600',
   },
 });
 
-export default memo(EventCart);
+export default memo(PopulerEventCart);
