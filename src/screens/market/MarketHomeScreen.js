@@ -31,7 +31,9 @@ import {Screen} from '../../components/ui/DesignSystem';
 import {MdiIcon} from '../../components/ui/MdiIcon';
 import {ROUTES} from '../../constants/routes';
 import {useAuth} from '../../context/AuthContext';
+import {useChats} from '../../context/ChatContext';
 import {useMarket} from '../../context/MarketContext';
+import {useSaved} from '../../context/SavedContext';
 import {useTheme} from '../../context/ThemeContext';
 import {
   DEFAULT_MARKET_FILTERS,
@@ -90,6 +92,7 @@ function MarketLoadingGrid() {
 
 export function MarketHomeScreen({navigation}) {
   const {profile, user} = useAuth();
+  const {notifications, startNotificationsListener} = useChats();
   const {theme} = useTheme();
   const tabBarHeight = useBottomTabBarHeight();
   const {width} = useWindowDimensions();
@@ -98,13 +101,16 @@ export function MarketHomeScreen({navigation}) {
     error,
     listings = [],
     loading,
-    removeSavedListing,
-    saveSelectedListing,
-    savedListingIds = [],
     selectListing,
     startListingsListener,
-    startSavedListingsListener,
   } = useMarket();
+  const {
+    getListingSaveId,
+    removeSave,
+    saveListing,
+    savedListingIds = [],
+    startSavesListener,
+  } = useSaved();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategoryKey, setActiveCategoryKey] = useState('all');
@@ -113,12 +119,16 @@ export function MarketHomeScreen({navigation}) {
   const [sheetMode, setSheetMode] = useState('filter');
   const [filterVisible, setFilterVisible] = useState(false);
   const [savingIds, setSavingIds] = useState([]);
+  const hasUnreadNotifications = useMemo(
+    () => notifications.some(item => item.read !== true),
+    [notifications],
+  );
 
   useEffect(() => {
     const unsubscribeListings = startListingsListener?.();
     const unsubscribeSaved =
-      user?.uid && startSavedListingsListener
-        ? startSavedListingsListener(user.uid)
+      user?.uid && startSavesListener
+        ? startSavesListener(user.uid)
         : undefined;
 
     return () => {
@@ -130,7 +140,15 @@ export function MarketHomeScreen({navigation}) {
         unsubscribeSaved();
       }
     };
-  }, [startListingsListener, startSavedListingsListener, user?.uid]);
+  }, [startListingsListener, startSavesListener, user?.uid]);
+
+  useEffect(() => {
+    if (!user?.uid) {
+      return undefined;
+    }
+
+    return startNotificationsListener(user.uid);
+  }, [startNotificationsListener, user?.uid]);
 
   const campusFilterSupported = useMemo(() => {
     return listings.some(
@@ -208,10 +226,10 @@ export function MarketHomeScreen({navigation}) {
     setSavingIds(current => [...current, listing.id]);
 
     try {
-      if (savedListingIds.includes(listing.id) && removeSavedListing) {
-        await removeSavedListing(user.uid, listing.id);
+      if (savedListingIds.includes(listing.id) && removeSave) {
+        await removeSave(user.uid, getListingSaveId(listing.id));
       } else {
-        await saveSelectedListing(user.uid, listing.id);
+        await saveListing(user.uid, listing);
       }
     } finally {
       setSavingIds(current => current.filter(id => id !== listing.id));
@@ -283,7 +301,7 @@ export function MarketHomeScreen({navigation}) {
                 </Text>
               </View>
               <HeaderIconButton
-                badge
+                badge={hasUnreadNotifications}
                 icon={mdiBellOutline}
                 onPress={() => navigation.navigate(ROUTES.NOTIFICATIONS)}
               />

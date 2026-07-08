@@ -1,4 +1,4 @@
-import React, {useMemo, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {
   Alert,
   Pressable,
@@ -10,6 +10,7 @@ import {
 import {
   mdiArrowLeft,
   mdiDotsVertical,
+  mdiHeart,
   mdiHeartOutline,
 } from '@mdi/js';
 
@@ -27,6 +28,7 @@ import {ROUTES} from '../../constants/routes';
 import {useAuth} from '../../context/AuthContext';
 import {useChats} from '../../context/ChatContext';
 import {useMarket} from '../../context/MarketContext';
+import {useSaved} from '../../context/SavedContext';
 import {
   formatPaymentMethods,
   getBooleanOptionLabel,
@@ -39,13 +41,29 @@ import {
 export function ListingDetailScreen({navigation}) {
   const {profile, user} = useAuth();
   const {startDirectChat} = useChats();
-  const {saveSelectedListing, selectedListing} = useMarket();
+  const {selectedListing} = useMarket();
+  const {
+    getListingSaveId,
+    removeSave,
+    saveListing,
+    savedListingIds = [],
+    startSavesListener,
+  } = useSaved();
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [saving, setSaving] = useState(false);
   const [startingChat, setStartingChat] = useState(false);
   const listing = selectedListing;
 
   const isOwnListing = Boolean(user?.uid && listing?.sellerId === user.uid);
+  const isSaved = Boolean(listing?.id && savedListingIds.includes(listing.id));
+
+  useEffect(() => {
+    if (!user?.uid) {
+      return undefined;
+    }
+
+    return startSavesListener(user.uid);
+  }, [startSavesListener, user?.uid]);
 
   const detailItems = useMemo(() => {
     if (!listing) {
@@ -85,7 +103,11 @@ export function ListingDetailScreen({navigation}) {
     setSaving(true);
 
     try {
-      await saveSelectedListing(user.uid, listing.id);
+      if (isSaved) {
+        await removeSave(user.uid, getListingSaveId(listing.id));
+      } else {
+        await saveListing(user.uid, listing);
+      }
     } catch (error) {
       Alert.alert('Kaydetme basarisiz', error.message);
     } finally {
@@ -138,7 +160,11 @@ export function ListingDetailScreen({navigation}) {
             </Pressable>
             <View style={styles.rightActions}>
               <Pressable onPress={handleSave} style={styles.iconButton}>
-                <MdiIcon path={mdiHeartOutline} size={23} color="#0F172A" />
+                <MdiIcon
+                  path={isSaved ? mdiHeart : mdiHeartOutline}
+                  size={23}
+                  color={isSaved ? '#DC2626' : '#0F172A'}
+                />
               </Pressable>
               <Pressable style={styles.iconButton}>
                 <MdiIcon path={mdiDotsVertical} size={23} color="#0F172A" />
