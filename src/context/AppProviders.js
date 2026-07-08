@@ -4,6 +4,7 @@ import { ChatProvider } from './ChatContext';
 import { CommunityProvider } from './CommunityContext';
 import { EventProvider } from './EventContext';
 import { MarketProvider } from './MarketContext';
+import { SavedProvider } from './SavedContext';
 import { ThemeProvider } from './ThemeContext';
 
 export function AppProviders({ children }) {
@@ -13,7 +14,9 @@ export function AppProviders({ children }) {
         <EventProvider>
           <CommunityProvider>
             <MarketProvider>
-              <ChatProvider>{children}</ChatProvider>
+              <SavedProvider>
+                <ChatProvider>{children}</ChatProvider>
+              </SavedProvider>
             </MarketProvider>
           </CommunityProvider>
         </EventProvider>
