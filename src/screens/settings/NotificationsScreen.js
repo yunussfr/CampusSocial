@@ -7,7 +7,12 @@ import { useTheme } from '../../context/ThemeContext';
 
 export function NotificationsScreen() {
   const { user } = useAuth();
-  const { error, notifications, startNotificationsListener } = useChats();
+  const {
+    error,
+    markUserNotificationsRead,
+    notifications,
+    startNotificationsListener,
+  } = useChats();
   const { theme } = useTheme();
 
   useEffect(() => {
@@ -17,6 +22,20 @@ export function NotificationsScreen() {
 
     return startNotificationsListener(user.uid);
   }, [startNotificationsListener, user]);
+
+  useEffect(() => {
+    if (!user?.uid || !notifications.length) {
+      return;
+    }
+
+    const unreadIds = notifications
+      .filter(item => item.read !== true)
+      .map(item => item.id);
+
+    if (unreadIds.length > 0) {
+      markUserNotificationsRead(user.uid, unreadIds);
+    }
+  }, [markUserNotificationsRead, notifications, user?.uid]);
 
   return (
     <Screen padded={false}>
