@@ -16,8 +16,6 @@ import {
   createNativeStackNavigator,
 } from '@react-navigation/native-stack';
 
-import Svg, {Path} from 'react-native-svg';
-
 import {
   mdiAccount,
   mdiAccountGroup,
@@ -40,6 +38,7 @@ import {useAuth} from '../context/AuthContext';
 import {useTheme} from '../context/ThemeContext';
 
 import {IconButton} from '../components/ui/IconButton';
+import {MdiIcon} from '../components/ui/MdiIcon';
 
 import {ForgotPasswordScreen} from '../screens/auth/ForgotPasswordScreen';
 import {LoginScreen} from '../screens/auth/LoginScreen';
@@ -406,6 +405,13 @@ function ProfileNavigator() {
           title: 'Kullanıcı Profili',
         }}
       />
+      <ProfileStack.Screen
+        name={ROUTES.NOTIFICATIONS}
+        component={NotificationsScreen}
+        options={{
+          title: 'Bildirimler',
+        }}
+      />
     </ProfileStack.Navigator>
   );
 }
@@ -514,24 +520,6 @@ function MainTabs() {
         }}
       />
     </Tab.Navigator>
-  );
-}
-
-function MdiIcon({
-  path,
-  size = 24,
-  color = '#64748B',
-}) {
-  return (
-    <Svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24">
-      <Path
-        d={path}
-        fill={color}
-      />
-    </Svg>
   );
 }
 
