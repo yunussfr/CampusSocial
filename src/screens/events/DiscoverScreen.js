@@ -1006,7 +1006,7 @@ function formatCoordinate(coordinate) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingTop: 14,
+    paddingTop: 28,
     paddingHorizontal: 16,
   },
 
