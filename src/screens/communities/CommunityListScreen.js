@@ -31,6 +31,7 @@ import {Screen} from '../../components/ui/DesignSystem';
 import {MdiIcon} from '../../components/ui/MdiIcon';
 import {ROUTES} from '../../constants/routes';
 import {useAuth} from '../../context/AuthContext';
+import {useChats} from '../../context/ChatContext';
 import {useCommunities} from '../../context/CommunityContext';
 import {useTheme} from '../../context/ThemeContext';
 import {
@@ -55,6 +56,7 @@ function cloneFilters(filters) {
 
 export function CommunityListScreen({navigation}) {
   const {profile, user} = useAuth();
+  const {notifications, startNotificationsListener} = useChats();
   const {theme} = useTheme();
   const tabBarHeight = useBottomTabBarHeight();
   const {width} = useWindowDimensions();
@@ -74,6 +76,10 @@ export function CommunityListScreen({navigation}) {
   const [draftFilters, setDraftFilters] = useState(DEFAULT_COMMUNITY_FILTERS);
   const [filterVisible, setFilterVisible] = useState(false);
   const [joiningIds, setJoiningIds] = useState([]);
+  const hasUnreadNotifications = useMemo(
+    () => notifications.some(item => item.read !== true),
+    [notifications],
+  );
 
   useEffect(() => {
     const unsubscribe = startCommunitiesListener?.();
@@ -84,6 +90,14 @@ export function CommunityListScreen({navigation}) {
       }
     };
   }, [startCommunitiesListener]);
+
+  useEffect(() => {
+    if (!user?.uid) {
+      return undefined;
+    }
+
+    return startNotificationsListener(user.uid);
+  }, [startNotificationsListener, user?.uid]);
 
   const joinedCommunityIds = useMemo(() => {
     return [
@@ -313,7 +327,9 @@ export function CommunityListScreen({navigation}) {
                   },
                 ]}>
                 <MdiIcon path={mdiBellOutline} size={25} color={theme.colors.text} />
-                <View style={styles.notificationDot} />
+                {hasUnreadNotifications ? (
+                  <View style={styles.notificationDot} />
+                ) : null}
               </Pressable>
             </View>
 
