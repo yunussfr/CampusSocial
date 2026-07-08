@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect, useMemo} from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -35,6 +35,7 @@ import {ROUTES} from '../constants/routes';
 import {ICONS, IMAGES} from '../constants/assets';
 
 import {useAuth} from '../context/AuthContext';
+import {useChats} from '../context/ChatContext';
 import {useTheme} from '../context/ThemeContext';
 
 import {IconButton} from '../components/ui/IconButton';
@@ -71,6 +72,7 @@ import {ProfileScreen} from '../screens/profile/ProfileScreen';
 import {UserProfileScreen} from '../screens/profile/UserProfileScreen';
 
 import {NotificationsScreen} from '../screens/settings/NotificationsScreen';
+import {SavedItemsScreen} from '../screens/settings/SavedItemsScreen';
 import {SettingsScreen} from '../screens/settings/SettingsScreen';
 
 const AuthStack = createNativeStackNavigator();
@@ -251,7 +253,7 @@ function CommunitiesNavigator() {
         name={ROUTES.COMMUNITY_LIST}
         component={CommunityListScreen}
         options={{
-          title: 'Topluluklarımız',
+          headerShown: false,
         }}
       />
 
@@ -269,14 +271,6 @@ function CommunitiesNavigator() {
         name={ROUTES.POST_DETAIL}
         component={PostDetailScreen}
       />
-
-      <CommunitiesStack.Screen
-        name={ROUTES.NOTIFICATIONS}
-        component={NotificationsScreen}
-        options={{
-          title: 'Bildirimler',
-        }}
-      />
     </CommunitiesStack.Navigator>
   );
 }
@@ -290,7 +284,7 @@ function MarketNavigator() {
         name={ROUTES.MARKET_HOME}
         component={MarketHomeScreen}
         options={{
-          title: 'Market',
+          headerShown: false,
         }}
       />
 
@@ -346,7 +340,7 @@ function ChatNavigator() {
         name={ROUTES.CHAT_LIST}
         component={ChatListScreen}
         options={{
-          title: 'Mesajlar',
+          headerShown: false,
         }}
       />
 
@@ -391,6 +385,14 @@ function ProfileNavigator() {
       />
 
       <ProfileStack.Screen
+        name={ROUTES.SAVED_ITEMS}
+        component={SavedItemsScreen}
+        options={{
+          title: 'Kaydedilenler',
+        }}
+      />
+
+      <ProfileStack.Screen
         name={ROUTES.EDIT_PROFILE}
         component={EditProfileScreen}
         options={{
@@ -417,7 +419,27 @@ function ProfileNavigator() {
 }
 
 function MainTabs() {
+  const {chats, startChatsListener} = useChats();
   const {theme} = useTheme();
+  const {user} = useAuth();
+
+  useEffect(() => {
+    if (!user?.uid) {
+      return undefined;
+    }
+
+    return startChatsListener(user.uid);
+  }, [startChatsListener, user?.uid]);
+
+  const unreadChatCount = useMemo(() => {
+    if (!user?.uid) {
+      return 0;
+    }
+
+    return chats.reduce((total, chat) => {
+      return total + Number(chat.unreadCounts?.[user.uid] || 0);
+    }, 0);
+  }, [chats, user?.uid]);
 
   return (
     <Tab.Navigator
@@ -508,6 +530,11 @@ function MainTabs() {
         name="ChatTab"
         component={ChatNavigator}
         options={{
+          tabBarBadge:
+            unreadChatCount > 0
+              ? unreadChatCount
+              : undefined,
+          tabBarBadgeStyle: styles.tabBadge,
           title: 'Messages',
         }}
       />
@@ -515,6 +542,15 @@ function MainTabs() {
       <Tab.Screen
         name="ProfileTab"
         component={ProfileNavigator}
+        listeners={({navigation}) => ({
+          tabPress: event => {
+            event.preventDefault();
+
+            navigation.navigate('ProfileTab', {
+              screen: ROUTES.PROFILE,
+            });
+          },
+        })}
         options={{
           title: 'Profile',
         }}
@@ -631,6 +667,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
     fontWeight: '600',
+  },
+
+  tabBadge: {
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#DC2626',
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '900',
   },
 
   tabIconWrap: {
