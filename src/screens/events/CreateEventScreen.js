@@ -1,6 +1,8 @@
+import DateTimePicker from '@react-native-community/datetimepicker';
 import React, { useState } from 'react';
 import {
   Image,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -8,6 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import MapView, { Marker } from 'react-native-maps';
 
 const EVENT_CATEGORIES = [
   'Akademik',
@@ -29,6 +32,13 @@ import { useAuth } from '../../context/AuthContext';
 import { useEvents } from '../../context/EventContext';
 import { uploadEventCover } from '../../services/storageService';
 
+const DEFAULT_REGION = {
+  latitude: 41.0082,
+  longitude: 28.9784,
+  latitudeDelta: 0.04,
+  longitudeDelta: 0.04,
+};
+
 export function CreateEventScreen({ navigation }) {
   const { profile, user } = useAuth();
   const { addEvent, setEventCover } = useEvents();
@@ -36,7 +46,21 @@ export function CreateEventScreen({ navigation }) {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [showCategories, setShowCategories] = useState(false);
-  const [location, setLocation] = useState('');
+  const [location, setLocation] = useState(null);
+  const [mapRegion, setMapRegion] = useState(DEFAULT_REGION);
+  const [startDate, setStartDate] = useState(() => {
+    const nextDate = new Date();
+    nextDate.setMinutes(0, 0, 0);
+    nextDate.setHours(nextDate.getHours() + 1);
+    return nextDate;
+  });
+  const [endDate, setEndDate] = useState(() => {
+    const nextDate = new Date();
+    nextDate.setMinutes(0, 0, 0);
+    nextDate.setHours(nextDate.getHours() + 2);
+    return nextDate;
+  });
+  const [activePicker, setActivePicker] = useState(null);
   const [capacity, setCapacity] = useState('');
   const [coverAsset, setCoverAsset] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -65,6 +89,18 @@ export function CreateEventScreen({ navigation }) {
     setSubmitting(true);
     setError(null);
 
+    if (!location) {
+      setSubmitting(false);
+      setError('Lutfen haritadan etkinlik konumu sec.');
+      return;
+    }
+
+    if (endDate <= startDate) {
+      setSubmitting(false);
+      setError('Bitis tarihi baslangic tarihinden sonra olmali.');
+      return;
+    }
+
     try {
       const eventId = await addEvent(
         {
@@ -72,7 +108,10 @@ export function CreateEventScreen({ navigation }) {
           description,
           category,
           location,
+          locationLabel: formatCoordinate(location),
           capacity,
+          startDate,
+          endDate,
           tags: category ? [category.trim().toLowerCase()] : [],
           isOnline: false,
           organizerName: profile?.displayName || user?.displayName || '',
@@ -95,6 +134,39 @@ export function CreateEventScreen({ navigation }) {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function handleDateChange(event, selectedDate) {
+    if (Platform.OS === 'android') {
+      setActivePicker(null);
+    }
+
+    if (!selectedDate || event.type === 'dismissed') {
+      return;
+    }
+
+    if (activePicker?.target === 'start') {
+      setStartDate(selectedDate);
+
+      if (selectedDate >= endDate) {
+        const nextEndDate = new Date(selectedDate);
+        nextEndDate.setHours(nextEndDate.getHours() + 1);
+        setEndDate(nextEndDate);
+      }
+    } else {
+      setEndDate(selectedDate);
+    }
+  }
+
+  function handleMapPress(event) {
+    const coordinate = event.nativeEvent.coordinate;
+
+    setLocation(coordinate);
+    setMapRegion(currentRegion => ({
+      ...currentRegion,
+      latitude: coordinate.latitude,
+      longitude: coordinate.longitude,
+    }));
   }
 
   return (
@@ -156,14 +228,90 @@ export function CreateEventScreen({ navigation }) {
           ))}
         </View>
       ) : null}
-      <TextInput
-        autoCorrect={false}
-        onChangeText={setLocation}
-        placeholder="Konum"
-        spellCheck={false}
-        style={styles.input}
-        value={location}
-      />
+      <View style={styles.dateSection}>
+        <Pressable
+          onPress={() =>
+            setActivePicker({
+              target: 'start',
+              mode: 'date',
+            })
+          }
+          style={styles.dateButton}>
+          <Text style={styles.dateLabel}>Baslangic tarihi</Text>
+          <Text style={styles.dateValue}>{formatDate(startDate)}</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() =>
+            setActivePicker({
+              target: 'start',
+              mode: 'time',
+            })
+          }
+          style={styles.dateButton}>
+          <Text style={styles.dateLabel}>Baslangic saati</Text>
+          <Text style={styles.dateValue}>{formatTime(startDate)}</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() =>
+            setActivePicker({
+              target: 'end',
+              mode: 'date',
+            })
+          }
+          style={styles.dateButton}>
+          <Text style={styles.dateLabel}>Bitis tarihi</Text>
+          <Text style={styles.dateValue}>{formatDate(endDate)}</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() =>
+            setActivePicker({
+              target: 'end',
+              mode: 'time',
+            })
+          }
+          style={styles.dateButton}>
+          <Text style={styles.dateLabel}>Bitis saati</Text>
+          <Text style={styles.dateValue}>{formatTime(endDate)}</Text>
+        </Pressable>
+      </View>
+
+      {activePicker ? (
+        <DateTimePicker
+          value={activePicker.target === 'start' ? startDate : endDate}
+          mode={activePicker.mode}
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          minimumDate={activePicker.target === 'end' ? startDate : undefined}
+          onChange={handleDateChange}
+        />
+      ) : null}
+
+      <View style={styles.mapSection}>
+        <Text style={styles.mapTitle}>Konumu haritadan sec</Text>
+        <Text style={styles.mapSubtitle}>
+          Etkinlik konumu elle yazilmaz. Haritada etkinligin yapilacagi noktaya dokun.
+        </Text>
+
+        <MapView
+          initialRegion={DEFAULT_REGION}
+          region={mapRegion}
+          onPress={handleMapPress}
+          onRegionChangeComplete={setMapRegion}
+          style={styles.map}>
+          {location ? (
+            <Marker coordinate={location} />
+          ) : null}
+        </MapView>
+
+        <Text style={styles.selectedLocation}>
+          {location
+            ? `Secilen konum: ${formatCoordinate(location)}`
+            : 'Henuz konum secilmedi.'}
+        </Text>
+      </View>
+
       <TextInput
         keyboardType="number-pad"
         onChangeText={setCapacity}
@@ -191,6 +339,25 @@ export function CreateEventScreen({ navigation }) {
       <Text style={styles.note}>Cover gorseli Storage'a yuklenir.</Text>
     </ScrollView>
   );
+}
+
+function formatDate(date) {
+  return new Intl.DateTimeFormat('tr-TR', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  }).format(date);
+}
+
+function formatTime(date) {
+  return new Intl.DateTimeFormat('tr-TR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+}
+
+function formatCoordinate(coordinate) {
+  return `${coordinate.latitude.toFixed(5)}, ${coordinate.longitude.toFixed(5)}`;
 }
 
 const styles = StyleSheet.create({
@@ -250,6 +417,56 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     overflow: 'hidden',
     marginTop: -8,
+  },
+  dateSection: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  dateButton: {
+    flexGrow: 1,
+    minWidth: '47%',
+    minHeight: 58,
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+  },
+  dateLabel: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  dateValue: {
+    marginTop: 3,
+    color: '#0B1C30',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  mapSection: {
+    gap: 8,
+  },
+  mapTitle: {
+    color: '#0B1C30',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  mapSubtitle: {
+    color: '#64748B',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  map: {
+    width: '100%',
+    height: 230,
+    borderRadius: 12,
+  },
+  selectedLocation: {
+    color: '#334155',
+    fontSize: 13,
+    fontWeight: '600',
   },
   categoryOption: {
     paddingHorizontal: 14,
