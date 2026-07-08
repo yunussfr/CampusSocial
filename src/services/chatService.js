@@ -99,16 +99,46 @@ export async function createOrGetDirectChat({
 }
 
 export async function sendMessage(chatId, senderId, text) {
-  return firestoreDb
-    .collection(COLLECTIONS.CHATS)
-    .doc(chatId)
-    .collection(COLLECTIONS.MESSAGES)
-    .add({
+  const trimmedText = text.trim();
+  const chatRef = firestoreDb.collection(COLLECTIONS.CHATS).doc(chatId);
+  const chatDoc = await chatRef.get();
+
+  if (!chatDoc.exists) {
+    throw new Error('Chat bulunamadı.');
+  }
+
+  const chat = chatDoc.data();
+  const messageRef = chatRef.collection(COLLECTIONS.MESSAGES).doc();
+  const now = firestore.FieldValue.serverTimestamp();
+  const chatUpdate = {
+    lastMessage: {
+      text: trimmedText,
       senderId,
-      text: text.trim(),
-      read: false,
-      createdAt: firestore.FieldValue.serverTimestamp(),
+      createdAt: now,
+    },
+    updatedAt: now,
+  };
+
+  (chat.participants || [])
+    .filter(participantId => participantId !== senderId)
+    .forEach(participantId => {
+      chatUpdate[`unreadCounts.${participantId}`] =
+        firestore.FieldValue.increment(1);
     });
+
+  const batch = firestoreDb.batch();
+
+  batch.set(messageRef, {
+    senderId,
+    text: trimmedText,
+    read: false,
+    createdAt: now,
+  });
+  batch.set(chatRef, chatUpdate, { merge: true });
+
+  await batch.commit();
+
+  return messageRef;
 }
 
 export async function markChatRead(chatId, userId) {
@@ -134,4 +164,24 @@ export function subscribeToNotifications({ userId, onData, onError }) {
         }
       },
     );
+}
+
+export function markNotificationsRead(userId, notificationIds) {
+  if (!notificationIds?.length) {
+    return Promise.resolve();
+  }
+
+  const batch = firestoreDb.batch();
+  const notificationsRef = firestoreDb
+    .collection(COLLECTIONS.USERS)
+    .doc(userId)
+    .collection(COLLECTIONS.NOTIFICATIONS);
+
+  notificationIds.forEach(notificationId => {
+    batch.update(notificationsRef.doc(notificationId), {
+      read: true,
+    });
+  });
+
+  return batch.commit();
 }
