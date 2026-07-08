@@ -32,14 +32,14 @@ export function ProfileScreen({ navigation }) {
         </View>
         <Text style={styles.bannerTitle}>{profile?.displayName || 'Profil'}</Text>
         <Text style={styles.bannerSubtitle}>
-          {profile?.department || '-'} {profile?.year ? `- ${profile.year}. sinif` : ''}
+          {profile?.department || '-'} {profile?.year ? `- ${profile.year}. sınıf` : ''}
         </Text>
       </View>
 
       <View style={styles.statsRow}>
         <Stat label="Takipci" value={profile?.followersCount || 0} />
         <Stat label="Takip" value={profile?.followingCount || 0} />
-        <Stat label="Ilgi" value={profile?.interests?.length || 0} />
+        <Stat label="İlgileri" value={profile?.interests?.length || 0} />
       </View>
 
       <Card style={styles.card}>
@@ -68,6 +68,9 @@ export function ProfileScreen({ navigation }) {
         </AppButton>
         <AppButton onPress={() => navigation.navigate(ROUTES.SETTINGS)} variant="secondary">
           Ayarlar
+        </AppButton>
+        <AppButton onPress={()=> navigation.navigate(ROUTES.NOTIFICATIONS)} variant="secondary">
+          Bildirimler
         </AppButton>
       </View>
     </Screen>
@@ -128,13 +131,13 @@ const styles = StyleSheet.create({
     borderColor: '#FFFFFF',
   },
   bannerTitle: {
-    color: '#FFFFFF',
+    color: '#c1b6b6',
     fontSize: 24,
     lineHeight: 32,
     fontWeight: '900',
   },
   bannerSubtitle: {
-    color: 'rgba(255,255,255,0.84)',
+    color: 'rgba(255, 255, 255, 0.84)',
     fontSize: 14,
     lineHeight: 20,
   },
