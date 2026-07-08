@@ -21,6 +21,7 @@ export const ROUTES = {
   EDIT_PROFILE: 'EditProfile',
   USER_PROFILE: 'UserProfile',
   SETTINGS: 'Settings',
+  SAVED_ITEMS: 'SavedItems',
   NOTIFICATIONS: 'Notifications',
   MY_EVENTS: 'MyEvents',
   MY_COMMUNITIES: 'MyCommunities',
