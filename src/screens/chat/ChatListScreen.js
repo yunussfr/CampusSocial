@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppInput, Screen, StateView } from '../../components/ui/DesignSystem';
 import { IMAGES, getProfilePlaceholder } from '../../constants/assets';
@@ -11,16 +11,8 @@ import { useTheme } from '../../context/ThemeContext';
 export function ChatListScreen({ navigation }) {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
-  const { chats, error, setActiveChat, startChatsListener } = useChats();
+  const { chats, error, setActiveChat } = useChats();
   const { theme } = useTheme();
-
-  useEffect(() => {
-    if (!user) {
-      return undefined;
-    }
-
-    return startChatsListener(user.uid);
-  }, [startChatsListener, user]);
 
   const filteredChats = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();

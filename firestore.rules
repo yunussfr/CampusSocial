@@ -51,6 +51,11 @@ service cloud.firestore {
         allow read, create, delete: if isOwner(userId);
         allow update: if false;
       }
+
+      match /saves/{saveId} {
+        allow read, create, delete: if isOwner(userId);
+        allow update: if false;
+      }
     }
 
     match /events/{eventId} {

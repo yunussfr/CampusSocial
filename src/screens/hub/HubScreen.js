@@ -286,6 +286,7 @@ export function HubScreen({navigation}) {
       screen: ROUTES.USER_PROFILE,
       params: {
         userId: person.uid,
+        userProfile: person,
       },
     });
   }

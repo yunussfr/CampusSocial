@@ -15,7 +15,6 @@ export function subscribeToEvents({ onData, onError }) {
   return firestoreDb
     .collection(COLLECTIONS.EVENTS)
     .where('status', '==', 'active')
-    .orderBy('startDate', 'asc')
     .onSnapshot(
       snapshot => {
         onData(snapshot.docs.map(mapDoc));
@@ -43,7 +42,8 @@ export async function createEvent(eventInput, organizer) {
       photoURL: organizer.photoURL || '',
     },
     category: eventInput.category.trim(),
-    location: eventInput.location.trim(),
+    location: eventInput.location,
+    locationLabel: eventInput.locationLabel || '',
     startDate: eventInput.startDate || now,
     endDate: eventInput.endDate || eventInput.startDate || now,
     capacity: Number(eventInput.capacity),

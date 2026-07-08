@@ -8,6 +8,7 @@ import React, {
 import { marketInitialState, marketReducer } from '../reducers/marketReducer';
 import {
   createListing,
+  removeSavedListing as deleteSavedListing,
   saveListing,
   subscribeToListings,
   subscribeToSavedListingIds,
@@ -71,6 +72,10 @@ export function MarketProvider({ children }) {
     return saveListing(userId, listingId);
   }, []);
 
+  const removeSavedListing = useCallback(async (userId, listingId) => {
+    return deleteSavedListing(userId, listingId);
+  }, []);
+
   const setListingImages = useCallback(async (listingId, imageURLs) => {
     return updateListingImages(listingId, imageURLs);
   }, []);
@@ -80,6 +85,7 @@ export function MarketProvider({ children }) {
       ...state,
       addListing,
       dispatch,
+      removeSavedListing,
       saveSelectedListing,
       selectListing,
       setListingImages,
@@ -89,6 +95,7 @@ export function MarketProvider({ children }) {
     }),
     [
       addListing,
+      removeSavedListing,
       saveSelectedListing,
       selectListing,
       setListingImages,

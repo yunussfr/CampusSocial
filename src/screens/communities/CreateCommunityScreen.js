@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import {
   Image,
   Pressable,
@@ -9,32 +9,22 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { launchImageLibrary } from 'react-native-image-picker';
+import {launchImageLibrary} from 'react-native-image-picker';
 
-const COMMUNITY_CATEGORIES = [
-  'Akademik ve Bölüm',
-  'Teknoloji ve Yazılım',
-  'Kariyer ve Girişimcilik',
-  'Kültür ve Sanat',
-  'Spor',
-  'Sosyal ve Hobi',
-  'Gönüllülük',
-  'Dil ve Uluslararası',
-  'Bilim ve Araştırma',
-  'Medya ve İletişim',
-  'Mezuniyet ve Networking',
-  'Diğer',
-];
-import { useAuth } from '../../context/AuthContext';
-import { useCommunities } from '../../context/CommunityContext';
+import {useAuth} from '../../context/AuthContext';
+import {useCommunities} from '../../context/CommunityContext';
 import {
   uploadCommunityCover,
   uploadCommunityIcon,
 } from '../../services/storageService';
+import {
+  COMMUNITY_CATEGORIES,
+  getCommunityCategoryByKey,
+} from '../../utils/communityCategories';
 
-export function CreateCommunityScreen({ navigation }) {
-  const { profile, user } = useAuth();
-  const { addCommunity, setCommunityMedia } = useCommunities();
+export function CreateCommunityScreen({navigation}) {
+  const {profile, user} = useAuth();
+  const {addCommunity, setCommunityMedia} = useCommunities();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
@@ -44,6 +34,7 @@ export function CreateCommunityScreen({ navigation }) {
   const [iconAsset, setIconAsset] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const selectedCategory = getCommunityCategoryByKey(category);
 
   async function pickImage(setAsset) {
     const result = await launchImageLibrary({
@@ -65,6 +56,11 @@ export function CreateCommunityScreen({ navigation }) {
   }
 
   async function handleSubmit() {
+    if (!selectedCategory) {
+      setError('Lutfen bir topluluk kategorisi secin.');
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
 
@@ -73,9 +69,9 @@ export function CreateCommunityScreen({ navigation }) {
         {
           name,
           description,
-          category,
+          category: selectedCategory.firestoreValue,
           isPrivate,
-          tags: category ? [category.trim().toLowerCase()] : [],
+          tags: [selectedCategory.firestoreValue.trim().toLowerCase()],
           rules: [],
         },
         {
@@ -133,34 +129,36 @@ export function CreateCommunityScreen({ navigation }) {
       <Pressable
         onPress={() => setShowCategories(prev => !prev)}
         style={[styles.input, styles.categorySelector]}>
-        <Text style={[
-          styles.categorySelectorText,
-          !category && styles.categoryPlaceholder,
-        ]}>
-          {category || 'Kategori seç'}
+        <Text
+          style={[
+            styles.categorySelectorText,
+            !selectedCategory && styles.categoryPlaceholder,
+          ]}>
+          {selectedCategory?.label || 'Kategori sec'}
         </Text>
         <Text style={styles.categoryArrow}>
-          {showCategories ? '▲' : '▼'}
+          {showCategories ? 'Yukari' : 'Asagi'}
         </Text>
       </Pressable>
       {showCategories ? (
         <View style={styles.categoryDropdown}>
           {COMMUNITY_CATEGORIES.map(cat => (
             <Pressable
-              key={cat}
+              key={cat.key}
               onPress={() => {
-                setCategory(cat);
+                setCategory(cat.key);
                 setShowCategories(false);
               }}
               style={[
                 styles.categoryOption,
-                category === cat && styles.categoryOptionActive,
+                category === cat.key && styles.categoryOptionActive,
               ]}>
-              <Text style={[
-                styles.categoryOptionText,
-                category === cat && styles.categoryOptionTextActive,
-              ]}>
-                {cat}
+              <Text
+                style={[
+                  styles.categoryOptionText,
+                  category === cat.key && styles.categoryOptionTextActive,
+                ]}>
+                {cat.label}
               </Text>
             </Pressable>
           ))}
@@ -178,7 +176,7 @@ export function CreateCommunityScreen({ navigation }) {
         </Text>
       </Pressable>
       {coverAsset?.uri ? (
-        <Image source={{ uri: coverAsset.uri }} style={styles.coverPreview} />
+        <Image source={{uri: coverAsset.uri}} style={styles.coverPreview} />
       ) : null}
       <Pressable
         onPress={() => pickImage(setIconAsset)}
@@ -188,13 +186,13 @@ export function CreateCommunityScreen({ navigation }) {
         </Text>
       </Pressable>
       {iconAsset?.uri ? (
-        <Image source={{ uri: iconAsset.uri }} style={styles.iconPreview} />
+        <Image source={{uri: iconAsset.uri}} style={styles.iconPreview} />
       ) : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Pressable
         disabled={submitting}
         onPress={handleSubmit}
-        style={styles.primaryButton}>
+        style={[styles.primaryButton, submitting && styles.disabledButton]}>
         <Text style={styles.primaryButtonText}>
           {submitting ? 'Kaydediliyor...' : 'Toplulugu Kaydet'}
         </Text>
@@ -295,6 +293,9 @@ const styles = StyleSheet.create({
     minHeight: 48,
     borderRadius: 10,
     backgroundColor: '#004AC6',
+  },
+  disabledButton: {
+    opacity: 0.65,
   },
   primaryButtonText: {
     color: '#FFFFFF',

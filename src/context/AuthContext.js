@@ -8,6 +8,7 @@ import React, {
 } from 'react';
 import {
   completeUserProfile,
+  deleteCurrentUserAccount,
   getUserProfile,
   followUser,
   registerWithEmail,
@@ -105,15 +106,9 @@ export function AuthProvider({ children }) {
       return null;
     }
 
-    setProfileLoading(true);
-
-    try {
-      const nextProfile = await getUserProfile(user.uid);
-      setProfile(nextProfile);
-      return nextProfile;
-    } finally {
-      setProfileLoading(false);
-    }
+    const nextProfile = await getUserProfile(user.uid);
+    setProfile(nextProfile);
+    return nextProfile;
   }, [user]);
 
   const updateProfile = useCallback(async payload => {
@@ -178,6 +173,21 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const deleteAccount = useCallback(async () => {
+    if (!user) {
+      return null;
+    }
+
+    setError(null);
+
+    try {
+      return await deleteCurrentUserAccount(user.uid);
+    } catch (deleteError) {
+      setError(deleteError.message);
+      throw deleteError;
+    }
+  }, [user]);
+
   const logout = useCallback(async () => {
     setError(null);
 
@@ -207,6 +217,7 @@ export function AuthProvider({ children }) {
       unfollowProfile,
       updateFcmToken,
       resetPassword,
+      deleteAccount,
       logout,
       setUser,
       setError,
@@ -222,6 +233,7 @@ export function AuthProvider({ children }) {
       refreshProfile,
       register,
       resetPassword,
+      deleteAccount,
       user,
       enableNotifications,
       updateFcmToken,

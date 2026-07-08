@@ -8,10 +8,13 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { mdiBookmark, mdiBookmarkOutline } from '@mdi/js';
+import { MdiIcon } from '../../components/ui/MdiIcon';
 import { IMAGES } from '../../constants/assets';
 import { ROUTES } from '../../constants/routes';
 import { useAuth } from '../../context/AuthContext';
 import { useCommunities } from '../../context/CommunityContext';
+import { useSaved } from '../../context/SavedContext';
 
 export function CommunityDetailScreen({ navigation, route }) {
   const { profile, user } = useAuth();
@@ -24,6 +27,13 @@ export function CommunityDetailScreen({ navigation, route }) {
     selectedCommunity,
     startCommunityPostsListener,
   } = useCommunities();
+  const {
+    getPostSaveId,
+    removeSave,
+    savePost,
+    savedPostIds = [],
+    startSavesListener,
+  } = useSaved();
   const [postContent, setPostContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const communityId = route.params?.communityId;
@@ -44,6 +54,14 @@ export function CommunityDetailScreen({ navigation, route }) {
 
     return unsubscribe;
   }, [communityId, startCommunityPostsListener]);
+
+  useEffect(() => {
+    if (!user?.uid) {
+      return undefined;
+    }
+
+    return startSavesListener(user.uid);
+  }, [startSavesListener, user?.uid]);
 
   if (!community) {
     return (
@@ -94,6 +112,19 @@ export function CommunityDetailScreen({ navigation, route }) {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function handleTogglePostSave(post) {
+    if (!user?.uid || !community?.id || !post?.id) {
+      return;
+    }
+
+    if (savedPostIds.includes(post.id)) {
+      await removeSave(user.uid, getPostSaveId(community.id, post.id));
+      return;
+    }
+
+    await savePost(user.uid, community.id, post);
   }
 
   return (
@@ -159,9 +190,24 @@ export function CommunityDetailScreen({ navigation, route }) {
             })
           }
           style={styles.postCard}>
-          <Text style={styles.postAuthor}>
-            {item.author?.displayName || 'Anonim'}
-          </Text>
+          <View style={styles.postHeader}>
+            <Text style={styles.postAuthor}>
+              {item.author?.displayName || 'Anonim'}
+            </Text>
+            <Pressable
+              hitSlop={8}
+              onPress={event => {
+                event.stopPropagation?.();
+                handleTogglePostSave(item);
+              }}
+              style={styles.savePostButton}>
+              <MdiIcon
+                path={savedPostIds.includes(item.id) ? mdiBookmark : mdiBookmarkOutline}
+                size={22}
+                color={savedPostIds.includes(item.id) ? '#2563EB' : '#64748B'}
+              />
+            </Pressable>
+          </View>
           <Text style={styles.postContent}>{item.content}</Text>
           <Text style={styles.meta}>
             {item.likeCount || 0} begeni - {item.commentCount || 0} yorum
@@ -267,9 +313,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   postAuthor: {
+    flex: 1,
     color: '#0B1C30',
     fontSize: 14,
     fontWeight: '700',
+  },
+  postHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  savePostButton: {
+    width: 34,
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 17,
+    backgroundColor: '#EFF6FF',
   },
   postContent: {
     color: '#334155',

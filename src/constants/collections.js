@@ -12,5 +12,6 @@ export const COLLECTIONS = {
   NOTIFICATIONS: 'notifications',
   SAVED_EVENTS: 'savedEvents',
   SAVED_LISTINGS: 'savedListings',
+  SAVES: 'saves',
   FOLLOWS: 'follows',
 };

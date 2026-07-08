@@ -74,14 +74,75 @@ exports.onMessageSent = onDocumentCreated(
   async event => {
     const { chatId } = event.params;
     const message = event.data.data();
+    const chatRef = db.doc(`chats/${chatId}`);
+    const chatSnapshot = await chatRef.get();
+    const chat = chatSnapshot.exists ? chatSnapshot.data() : null;
+    const recipientIds = (chat?.participants || []).filter(userId => {
+      return userId !== message.senderId;
+    });
 
-    await updateDocument(`chats/${chatId}`, {
+    await chatRef.set({
       lastMessage: {
         text: message.text || '',
         senderId: message.senderId,
         createdAt: message.createdAt || fieldValue.serverTimestamp(),
       },
       updatedAt: fieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    if (!recipientIds.length) {
+      return;
+    }
+
+    const senderProfile =
+      chat?.participantProfiles?.[message.senderId] || {};
+    const senderName =
+      senderProfile.displayName || 'CampusConnect';
+    const notificationTitle = `${senderName} sana mesaj gönderdi`;
+    const notificationBody = message.text || 'Yeni bir mesajın var.';
+
+    await Promise.all(
+      recipientIds.map(recipientId => {
+        return db
+          .collection('users')
+          .doc(recipientId)
+          .collection('notifications')
+          .add({
+            type: 'message',
+            chatId,
+            senderId: message.senderId,
+            title: notificationTitle,
+            message: notificationBody,
+            read: false,
+            createdAt: fieldValue.serverTimestamp(),
+          });
+      }),
+    );
+
+    const recipientSnapshots = await Promise.all(
+      recipientIds.map(recipientId => {
+        return db.collection('users').doc(recipientId).get();
+      }),
+    );
+    const tokens = recipientSnapshots
+      .map(snapshot => snapshot.data()?.fcmToken)
+      .filter(Boolean);
+
+    if (!tokens.length) {
+      return;
+    }
+
+    await admin.messaging().sendEachForMulticast({
+      tokens,
+      notification: {
+        title: notificationTitle,
+        body: notificationBody,
+      },
+      data: {
+        type: 'message',
+        chatId,
+        senderId: message.senderId || '',
+      },
     });
   },
 );

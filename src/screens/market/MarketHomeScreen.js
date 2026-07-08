@@ -1,208 +1,692 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {
+  ActivityIndicator,
   FlatList,
+  Pressable,
   StyleSheet,
   Text,
+  TextInput,
+  useWindowDimensions,
   View,
-  Pressable,
-  Image,
 } from 'react-native';
-import { ListingCard } from '../../components/market/ListingCard';
+import {useBottomTabBarHeight} from '@react-navigation/bottom-tabs';
+import LinearGradient from 'react-native-linear-gradient';
 import {
-  AppButton,
-  AppInput,
-  ChipRow,
-  Screen,
-  SectionHeader,
-  StateView,
-} from '../../components/ui/DesignSystem';
-import { ICONS, IMAGES } from '../../constants/assets';
-import { ROUTES } from '../../constants/routes';
-import { useAuth } from '../../context/AuthContext';
-import { useMarket } from '../../context/MarketContext';
+  mdiBellOutline,
+  mdiFilterVariant,
+  mdiFlashOutline,
+  mdiMagnify,
+  mdiPlus,
+  mdiStarOutline,
+  mdiSwapVertical,
+} from '@mdi/js';
 
-export function MarketHomeScreen({ navigation }) {
-  const { user } = useAuth();
-  const [activeCategory, setActiveCategory] = useState('Tumu');
-  const [searchQuery, setSearchQuery] = useState('');
+import MarketCategoryRow from '../../components/market/MarketCategoryRow';
+import {MarketEmptyState} from '../../components/market/MarketEmptyState';
+import {MarketFilterSheet} from '../../components/market/MarketFilterSheet';
+import MarketGridCard from '../../components/market/MarketGridCard';
+import {MarketPromoBanner} from '../../components/market/MarketPromoBanner';
+import MarketRecommendationCard from '../../components/market/MarketRecommendationCard';
+import {Screen} from '../../components/ui/DesignSystem';
+import {MdiIcon} from '../../components/ui/MdiIcon';
+import {ROUTES} from '../../constants/routes';
+import {useAuth} from '../../context/AuthContext';
+import {useChats} from '../../context/ChatContext';
+import {useMarket} from '../../context/MarketContext';
+import {useSaved} from '../../context/SavedContext';
+import {useTheme} from '../../context/ThemeContext';
+import {
+  DEFAULT_MARKET_FILTERS,
+  MARKET_CATEGORIES,
+} from '../../utils/marketCategories';
+import {
+  filterMarketListings,
+  getActiveMarketFilterCount,
+  getRecommendedListings,
+} from '../../utils/marketFilters';
+
+function SectionTitle({actionLabel, icon, onAction, title}) {
+  return (
+    <View style={styles.sectionTitleRow}>
+      <View style={styles.sectionTitleLeft}>
+        <MdiIcon path={icon} size={24} color="#2563EB" />
+        <Text style={styles.sectionTitle}>{title}</Text>
+      </View>
+
+      {actionLabel ? (
+        <Pressable hitSlop={8} onPress={onAction}>
+          <Text style={styles.sectionAction}>{actionLabel}</Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+function HeaderIconButton({badge, icon, onPress}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      hitSlop={8}
+      onPress={onPress}
+      style={({pressed}) => [styles.headerIconButton, pressed && styles.pressed]}>
+      <MdiIcon path={icon} size={24} color="#0F172A" />
+      {badge ? <View style={styles.notificationDot} /> : null}
+    </Pressable>
+  );
+}
+
+function MarketLoadingGrid() {
+  return (
+    <View style={styles.loadingGrid}>
+      {[0, 1, 2, 3].map(item => (
+        <View key={item} style={styles.loadingCard}>
+          <View style={styles.loadingImage} />
+          <View style={styles.loadingLineLarge} />
+          <View style={styles.loadingLineMedium} />
+          <View style={styles.loadingLineSmall} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
+export function MarketHomeScreen({navigation}) {
+  const {profile, user} = useAuth();
+  const {notifications, startNotificationsListener} = useChats();
+  const {theme} = useTheme();
+  const tabBarHeight = useBottomTabBarHeight();
+  const {width} = useWindowDimensions();
+
   const {
     error,
-    listings,
+    listings = [],
     loading,
-    savedListingIds,
     selectListing,
     startListingsListener,
-    startSavedListingsListener,
   } = useMarket();
+  const {
+    getListingSaveId,
+    removeSave,
+    saveListing,
+    savedListingIds = [],
+    startSavesListener,
+  } = useSaved();
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategoryKey, setActiveCategoryKey] = useState('all');
+  const [filters, setFilters] = useState(DEFAULT_MARKET_FILTERS);
+  const [draftFilters, setDraftFilters] = useState(DEFAULT_MARKET_FILTERS);
+  const [sheetMode, setSheetMode] = useState('filter');
+  const [filterVisible, setFilterVisible] = useState(false);
+  const [savingIds, setSavingIds] = useState([]);
+  const hasUnreadNotifications = useMemo(
+    () => notifications.some(item => item.read !== true),
+    [notifications],
+  );
 
   useEffect(() => {
-    const unsubscribeListings = startListingsListener();
-    const unsubscribeSaved = user
-      ? startSavedListingsListener(user.uid)
-      : undefined;
+    const unsubscribeListings = startListingsListener?.();
+    const unsubscribeSaved =
+      user?.uid && startSavesListener
+        ? startSavesListener(user.uid)
+        : undefined;
 
     return () => {
-      unsubscribeListings?.();
-      unsubscribeSaved?.();
+      if (typeof unsubscribeListings === 'function') {
+        unsubscribeListings();
+      }
+
+      if (typeof unsubscribeSaved === 'function') {
+        unsubscribeSaved();
+      }
     };
-  }, [startListingsListener, startSavedListingsListener, user]);
+  }, [startListingsListener, startSavesListener, user?.uid]);
 
-  const filteredListings = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
+  useEffect(() => {
+    if (!user?.uid) {
+      return undefined;
+    }
 
-    return listings.filter(listing => {
-      const matchesCategory =
-        activeCategory === 'Tumu' || listing.category === activeCategory;
+    return startNotificationsListener(user.uid);
+  }, [startNotificationsListener, user?.uid]);
 
-      if (!matchesCategory) {
-        return false;
-      }
+  const campusFilterSupported = useMemo(() => {
+    return listings.some(
+      listing =>
+        listing?.campusId ||
+        listing?.universityId ||
+        listing?.campusOnly !== undefined ||
+        listing?.isCampusOnly !== undefined ||
+        listing?.seller?.campusId,
+    );
+  }, [listings]);
 
-      if (!normalizedQuery) {
-        return true;
-      }
+  const appliedFilters = useMemo(() => {
+    return campusFilterSupported
+      ? filters
+      : {...filters, campusOnly: false};
+  }, [campusFilterSupported, filters]);
 
-      const searchableText = [
-        listing.title,
-        listing.description,
-        listing.category,
-        listing.seller?.displayName,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-
-      return searchableText.includes(normalizedQuery);
+  const visibleListings = useMemo(() => {
+    return filterMarketListings({
+      listings,
+      searchQuery,
+      activeCategoryKey,
+      filters: appliedFilters,
+      user: profile || user,
     });
-  }, [listings, activeCategory, searchQuery]);
+  }, [activeCategoryKey, appliedFilters, listings, profile, searchQuery, user]);
+
+  const recommendedListings = useMemo(() => {
+    return getRecommendedListings(visibleListings, 6);
+  }, [visibleListings]);
+
+  const filterCount = useMemo(() => {
+    return getActiveMarketFilterCount(appliedFilters, campusFilterSupported);
+  }, [appliedFilters, campusFilterSupported]);
+
+  const recommendationCardWidth = Math.min(280, width * 0.68);
+
+  function openSheet(mode) {
+    setSheetMode(mode);
+    setDraftFilters(appliedFilters);
+    setFilterVisible(true);
+  }
+
+  function applyDraftFilters() {
+    setFilters(
+      campusFilterSupported
+        ? draftFilters
+        : {...draftFilters, campusOnly: false},
+    );
+
+    if (draftFilters.categoryKeys.length > 0) {
+      setActiveCategoryKey('all');
+    }
+
+    setFilterVisible(false);
+  }
+
+  function clearDraftFilters() {
+    setDraftFilters(DEFAULT_MARKET_FILTERS);
+  }
+
+  function openListing(listing) {
+    selectListing(listing);
+    navigation.navigate(ROUTES.LISTING_DETAIL, {
+      listingId: listing.id,
+    });
+  }
+
+  async function toggleSaveListing(listing) {
+    if (!user?.uid || !listing?.id || savingIds.includes(listing.id)) {
+      return;
+    }
+
+    setSavingIds(current => [...current, listing.id]);
+
+    try {
+      if (savedListingIds.includes(listing.id) && removeSave) {
+        await removeSave(user.uid, getListingSaveId(listing.id));
+      } else {
+        await saveListing(user.uid, listing);
+      }
+    } finally {
+      setSavingIds(current => current.filter(id => id !== listing.id));
+    }
+  }
+
+  function getEmptyType() {
+    if (error) {
+      return 'error';
+    }
+
+    if (searchQuery.trim()) {
+      return 'search';
+    }
+
+    if (filterCount > 0 || activeCategoryKey !== 'all') {
+      return 'filter';
+    }
+
+    return 'empty';
+  }
+
+  const renderListing = ({item}) => (
+    <View style={styles.gridItem}>
+      <MarketGridCard
+        listing={item}
+        saved={savedListingIds.includes(item.id)}
+        onPress={() => openListing(item)}
+        onSave={() => toggleSaveListing(item)}
+      />
+    </View>
+  );
 
   return (
     <Screen padded={false}>
       <FlatList
-        contentContainerStyle={styles.listContent}
         columnWrapperStyle={styles.gridRow}
-        data={filteredListings}
-        numColumns={2}
-        keyExtractor={item => item.id}
+        contentContainerStyle={[
+          styles.listContent,
+          {
+            paddingBottom: tabBarHeight + 28,
+            backgroundColor: theme.colors.background,
+          },
+        ]}
+        data={loading && listings.length === 0 ? [] : visibleListings}
+        initialNumToRender={8}
+        keyExtractor={item => String(item.id)}
+        ListEmptyComponent={
+          loading && listings.length === 0 ? (
+            <MarketLoadingGrid />
+          ) : (
+            <MarketEmptyState
+              type={getEmptyType()}
+              actionLabel={error ? undefined : 'İlan Oluştur'}
+              onAction={() => navigation.navigate(ROUTES.CREATE_LISTING)}
+            />
+          )
+        }
         ListHeaderComponent={
-          <>
-            <View style={styles.headerSection}>
-              <View style={styles.headerTextWrap}>
-                <Text style={styles.title}>Market</Text>
-                <Text style={styles.mutedText}>Kampus ikinci el ilanlari</Text>
+          <View>
+            <View style={styles.pageHeader}>
+              <View style={styles.pageHeaderText}>
+                <Text style={[styles.pageTitle, {color: theme.colors.text}]}>
+                  Market
+                </Text>
+                <Text
+                  style={[styles.pageSubtitle, {color: theme.colors.mutedText}]}>
+                  Kampüs içi ikinci el ilanları keşfet
+                </Text>
               </View>
-              <Pressable onPress={() => navigation.navigate('EventsTab', { screen: ROUTES.DISCOVER })}>
-                <Image 
-                  source={IMAGES.brandLogo} 
-                  style={styles.brandLogo} 
-                  resizeMode="contain" 
+              <HeaderIconButton
+                badge={hasUnreadNotifications}
+                icon={mdiBellOutline}
+                onPress={() => navigation.navigate(ROUTES.NOTIFICATIONS)}
+              />
+            </View>
+
+            <View style={styles.searchActionsWrap}>
+              <View style={styles.searchBox}>
+                <MdiIcon path={mdiMagnify} size={23} color="#64748B" />
+                <TextInput
+                  autoCorrect={false}
+                  onChangeText={setSearchQuery}
+                  placeholder="İlan, kategori veya satıcı ara..."
+                  placeholderTextColor="#94A3B8"
+                  returnKeyType="search"
+                  style={styles.searchInput}
+                  value={searchQuery}
                 />
+              </View>
+
+              <View style={styles.searchActionRow}>
+                <Pressable
+                  onPress={() => openSheet('filter')}
+                  style={({pressed}) => [
+                    styles.outlineAction,
+                    pressed && styles.pressed,
+                  ]}>
+                  <MdiIcon path={mdiFilterVariant} size={20} color="#2563EB" />
+                  <Text style={styles.outlineActionText}>Filtrele</Text>
+                  {filterCount > 0 ? (
+                    <View style={styles.filterCount}>
+                      <Text style={styles.filterCountText}>{filterCount}</Text>
+                    </View>
+                  ) : null}
+                </Pressable>
+
+                <Pressable
+                  onPress={() => openSheet('sort')}
+                  style={({pressed}) => [
+                    styles.outlineAction,
+                    pressed && styles.pressed,
+                  ]}>
+                  <MdiIcon path={mdiSwapVertical} size={20} color="#2563EB" />
+                  <Text style={styles.outlineActionText}>Sırala</Text>
+                </Pressable>
+              </View>
+            </View>
+
+            <MarketCategoryRow
+              activeCategoryKey={activeCategoryKey}
+              categories={MARKET_CATEGORIES}
+              onCategoryPress={setActiveCategoryKey}
+            />
+
+            <MarketPromoBanner onPress={() => setActiveCategoryKey('all')} />
+
+            <View style={styles.mainActions}>
+              <Pressable
+                onPress={() => navigation.navigate(ROUTES.CREATE_LISTING)}
+                style={styles.createListingButtonWrap}>
+                <LinearGradient
+                  colors={['#2563EB', '#1D4ED8']}
+                  style={styles.createListingButton}>
+                  <MdiIcon path={mdiPlus} size={21} color="#FFFFFF" />
+                  <Text style={styles.createListingText}>İlan Oluştur</Text>
+                </LinearGradient>
+              </Pressable>
+
+              <Pressable
+                onPress={() => navigation.navigate(ROUTES.MY_LISTINGS)}
+                style={styles.myListingsButton}>
+                <Text style={styles.myListingsText}>İlanlarım</Text>
               </Pressable>
             </View>
-            <AppInput
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              leftIcon={ICONS.search}
-              placeholder="Ilan, kategori veya satici ara..."
-              style={{ marginBottom: 16 }}
-            />
-            <ChipRow
-              activeItem={activeCategory}
-              items={['Tumu', 'Kitap', 'Elektronik', 'Giyim', 'Diger']}
-              onItemPress={setActiveCategory}
-            />
-            <View style={styles.actionRow}>
-              <AppButton
-                onPress={() => navigation.navigate(ROUTES.CREATE_LISTING)}
-                style={styles.actionButton}>
-                Ilan Olustur
-              </AppButton>
-              <AppButton
-                onPress={() => navigation.navigate(ROUTES.MY_LISTINGS)}
-                style={styles.actionButton}
-                variant="secondary">
-                Ilanlarim
-              </AppButton>
-            </View>
-            <SectionHeader title="Yeni Ilanlar" />
-            <StateView
-              error={error}
-              loading={loading && listings.length === 0}
-              title="Ilanlar yukleniyor..."
-            />
-          </>
-        }
-        ListEmptyComponent={
-          !loading && !error ? <StateView empty title="Henuz ilan yok." /> : null
-        }
-        renderItem={({ item }) => (
-          <View style={styles.gridItem}>
-            <ListingCard
-              listing={item}
-              saved={savedListingIds.includes(item.id)}
-              onPress={() => {
-                selectListing(item);
-                navigation.navigate(ROUTES.LISTING_DETAIL, {
-                  listingId: item.id,
-                });
-              }}
-            />
+
+            {error ? (
+              <MarketEmptyState
+                type="error"
+                title="İlanlar yüklenemedi."
+                description="Bağlantı veya yetki sorununu kontrol et."
+              />
+            ) : null}
+
+            {recommendedListings.length > 0 ? (
+              <>
+                <SectionTitle
+                  actionLabel="Tümünü Gör"
+                  icon={mdiStarOutline}
+                  title="Sana Özel Öneriler"
+                />
+                <FlatList
+                  horizontal
+                  contentContainerStyle={styles.recommendationsContent}
+                  data={recommendedListings}
+                  keyExtractor={item => String(item.id)}
+                  renderItem={({item}) => (
+                    <MarketRecommendationCard
+                      listing={item}
+                      saved={savedListingIds.includes(item.id)}
+                      width={recommendationCardWidth}
+                      onPress={() => openListing(item)}
+                      onSave={() => toggleSaveListing(item)}
+                    />
+                  )}
+                  showsHorizontalScrollIndicator={false}
+                />
+              </>
+            ) : null}
+
+            <SectionTitle icon={mdiFlashOutline} title="Yeni İlanlar" />
+
+            {loading && listings.length > 0 ? (
+              <View style={styles.inlineLoading}>
+                <ActivityIndicator color="#2563EB" />
+                <Text style={styles.inlineLoadingText}>İlanlar güncelleniyor...</Text>
+              </View>
+            ) : null}
           </View>
-        )}
+        }
+        numColumns={2}
+        renderItem={renderListing}
+        showsVerticalScrollIndicator={false}
+        windowSize={7}
+      />
+
+      <MarketFilterSheet
+        campusFilterSupported={campusFilterSupported}
+        categories={MARKET_CATEGORIES}
+        draftFilters={draftFilters}
+        mode={sheetMode}
+        onApply={applyDraftFilters}
+        onChange={setDraftFilters}
+        onClear={clearDraftFilters}
+        onClose={() => setFilterVisible(false)}
+        visible={filterVisible}
       />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  headerSection: {
+  pressed: {
+    opacity: 0.78,
+  },
+  listContent: {
+    flexGrow: 1,
+    paddingTop: 22,
+    paddingHorizontal: 16,
+  },
+  pageHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 18,
   },
-  headerTextWrap: {
+  pageHeaderText: {
     flex: 1,
+    paddingRight: 12,
   },
-  brandLogo: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+  pageTitle: {
+    fontSize: 36,
+    lineHeight: 42,
+    fontWeight: '900',
+  },
+  pageSubtitle: {
+    marginTop: 3,
+    fontSize: 15,
+    lineHeight: 21,
+    fontWeight: '600',
+  },
+  headerIconButton: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#0F172A',
+    shadowOffset: {width: 0, height: 7},
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  notificationDot: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    borderRadius: 4,
+    backgroundColor: '#7C3AED',
+  },
+  searchActionsWrap: {
+    gap: 10,
+  },
+  searchBox: {
+    minHeight: 54,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#D8E0EC',
+    borderRadius: 17,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#0F172A',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.04,
+    shadowRadius: 9,
     elevation: 2,
   },
-  title: {
-    color: '#0B1C30',
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-  },
-  mutedText: {
-    color: '#64748B',
+  searchInput: {
+    flex: 1,
+    paddingVertical: 0,
+    color: '#0F172A',
     fontSize: 15,
-    marginTop: 4,
     fontWeight: '500',
   },
-  actionRow: {
+  searchActionRow: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 16,
   },
-  actionButton: { flex: 1 },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 112,
-    paddingTop: 24,
+  outlineAction: {
+    minHeight: 45,
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    borderWidth: 1.2,
+    borderColor: '#BFD0FF',
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+  },
+  outlineActionText: {
+    color: '#2563EB',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  filterCount: {
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 5,
+    borderRadius: 10,
+    backgroundColor: '#2563EB',
+  },
+  filterCountText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  mainActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 20,
+  },
+  createListingButtonWrap: {
+    flex: 1,
+    overflow: 'hidden',
+    borderRadius: 15,
+  },
+  createListingButton: {
+    minHeight: 51,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: 15,
+  },
+  createListingText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  myListingsButton: {
+    flex: 1,
+    minHeight: 51,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#D8E0EC',
+    borderRadius: 15,
+    backgroundColor: '#FFFFFF',
+  },
+  myListingsText: {
+    color: '#2563EB',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  sectionTitleRow: {
+    minHeight: 35,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 11,
+    marginTop: 2,
+  },
+  sectionTitleLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sectionTitle: {
+    color: '#0F172A',
+    fontSize: 20,
+    lineHeight: 25,
+    fontWeight: '900',
+  },
+  sectionAction: {
+    color: '#2563EB',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  recommendationsContent: {
+    gap: 12,
+    paddingRight: 16,
+    paddingBottom: 22,
+  },
+  inlineLoading: {
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+  },
+  inlineLoadingText: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '700',
   },
   gridRow: {
-    gap: 16,
+    gap: 12,
   },
   gridItem: {
     flex: 1,
-    marginBottom: 16,
+    minWidth: 0,
+    marginBottom: 12,
+  },
+  loadingGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    paddingBottom: 24,
+  },
+  loadingCard: {
+    width: '48%',
+    overflow: 'hidden',
+    paddingBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+  },
+  loadingImage: {
+    height: 140,
+    backgroundColor: '#E2E8F0',
+  },
+  loadingLineLarge: {
+    height: 14,
+    marginTop: 12,
+    marginHorizontal: 12,
+    borderRadius: 7,
+    backgroundColor: '#E2E8F0',
+  },
+  loadingLineMedium: {
+    width: '62%',
+    height: 12,
+    marginTop: 8,
+    marginHorizontal: 12,
+    borderRadius: 6,
+    backgroundColor: '#E2E8F0',
+  },
+  loadingLineSmall: {
+    width: '45%',
+    height: 10,
+    marginTop: 8,
+    marginHorizontal: 12,
+    borderRadius: 5,
+    backgroundColor: '#E2E8F0',
   },
 });
+
+export default MarketHomeScreen;

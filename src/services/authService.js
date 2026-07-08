@@ -144,6 +144,41 @@ export async function updateUserProfile(uid, profile) {
   return getUserProfile(uid);
 }
 
+export async function deleteCurrentUserAccount(uid) {
+  const currentUser = firebaseAuth.currentUser;
+
+  if (!currentUser) {
+    throw new Error('Oturum bulunamadi.');
+  }
+
+  const userRef = firestoreDb.collection(COLLECTIONS.USERS).doc(uid);
+
+  await userRef.set(
+    {
+      accountStatus: 'deleting',
+      fcmToken: null,
+      deletedAt: firestore.FieldValue.serverTimestamp(),
+      updatedAt: firestore.FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
+
+  try {
+    return await currentUser.delete();
+  } catch (deleteError) {
+    await userRef.set(
+      {
+        accountStatus: firestore.FieldValue.delete(),
+        deletedAt: firestore.FieldValue.delete(),
+        updatedAt: firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+
+    throw deleteError;
+  }
+}
+
 export async function followUser(currentUserId, targetUserId) {
   const now = firestore.FieldValue.serverTimestamp();
 
@@ -179,12 +214,23 @@ export async function setUserFcmToken(uid, fcmToken) {
 
 export async function requestAndSaveFcmToken(uid) {
   if (firebaseMessaging.requestPermission) {
-    await firebaseMessaging.requestPermission();
+    const permissionStatus = await firebaseMessaging.requestPermission();
+
+    if (
+      permissionStatus === firebaseMessaging.AuthorizationStatus?.DENIED ||
+      permissionStatus === -1
+    ) {
+      throw new Error('Bildirim izni verilmedi.');
+    }
   }
 
   const token = firebaseMessaging.getToken
     ? await firebaseMessaging.getToken()
     : null;
+
+  if (!token) {
+    throw new Error('Bildirim tokeni alinamadi.');
+  }
 
   await setUserFcmToken(uid, token);
 

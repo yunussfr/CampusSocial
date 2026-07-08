@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 import {
   createOrGetDirectChat,
+  markNotificationsRead,
   markChatRead,
   sendMessage,
   subscribeToChats,
@@ -70,6 +71,10 @@ export function ChatProvider({ children }) {
     return markChatRead(chatId, userId);
   }, []);
 
+  const markUserNotificationsRead = useCallback(async (userId, notificationIds) => {
+    return markNotificationsRead(userId, notificationIds);
+  }, []);
+
   const startNotificationsListener = useCallback(userId => {
     setLoading(true);
     setError(null);
@@ -96,6 +101,7 @@ export function ChatProvider({ children }) {
       messages,
       notifications,
       markActiveChatRead,
+      markUserNotificationsRead,
       sendChatMessage,
       setChats,
       setActiveChat,
@@ -110,6 +116,7 @@ export function ChatProvider({ children }) {
       error,
       loading,
       markActiveChatRead,
+      markUserNotificationsRead,
       messages,
       notifications,
       sendChatMessage,

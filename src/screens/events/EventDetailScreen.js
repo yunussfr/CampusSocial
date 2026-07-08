@@ -1,6 +1,7 @@
 import React, { useContext, useMemo, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
+import MapView, { Marker } from 'react-native-maps';
 
 import { AppButton, Card, StateView } from '../../components/ui/DesignSystem';
 import { ICONS, IMAGES } from '../../constants/assets';
@@ -103,10 +104,59 @@ export function EventDetailScreen({ route }) {
             <View style={styles.heroMetaRow}>
               <Image source={ICONS.location} style={styles.heroMetaIcon} />
 
-              <Text style={styles.heroMeta}>{String(event.location || '')}</Text>
+              <Text style={styles.heroMeta}>{getEventLocationLabel(event)}</Text>
             </View>
           </View>
         </View>
+
+        <Card style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+            Tarih ve Saat
+          </Text>
+
+          <View style={styles.dateGrid}>
+            <View style={styles.dateCell}>
+              <Text style={[styles.dateLabel, { color: theme.colors.subtleText }]}>
+                Baslangic
+              </Text>
+              <Text style={[styles.dateValue, { color: theme.colors.text }]}>
+                {formatDateTime(event.startDate)}
+              </Text>
+            </View>
+
+            <View style={styles.dateCell}>
+              <Text style={[styles.dateLabel, { color: theme.colors.subtleText }]}>
+                Bitis
+              </Text>
+              <Text style={[styles.dateValue, { color: theme.colors.text }]}>
+                {formatDateTime(event.endDate)}
+              </Text>
+            </View>
+          </View>
+        </Card>
+
+        {getEventCoordinate(event) ? (
+          <Card style={styles.card}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+              Konum
+            </Text>
+
+            <Text style={[styles.meta, { color: theme.colors.subtleText }]}>
+              {getEventLocationLabel(event)}
+            </Text>
+
+            <MapView
+              pointerEvents="none"
+              initialRegion={{
+                ...getEventCoordinate(event),
+                latitudeDelta: 0.015,
+                longitudeDelta: 0.015,
+              }}
+              style={styles.map}>
+              <Marker coordinate={getEventCoordinate(event)} />
+            </MapView>
+          </Card>
+        ) : null}
 
         <Card style={styles.card}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
@@ -143,6 +193,74 @@ export function EventDetailScreen({ route }) {
       </ScrollView>
     </View>
   );
+}
+
+function formatDateTime(value) {
+  const date = convertToDate(value);
+
+  if (!date) {
+    return 'Belirtilmedi';
+  }
+
+  return new Intl.DateTimeFormat('tr-TR', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+}
+
+function convertToDate(value) {
+  if (!value) {
+    return null;
+  }
+
+  if (typeof value.toDate === 'function') {
+    return value.toDate();
+  }
+
+  const date = new Date(value);
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function getEventCoordinate(event) {
+  if (
+    !event.location ||
+    typeof event.location !== 'object'
+  ) {
+    return null;
+  }
+
+  const latitude = Number(event.location.latitude);
+  const longitude = Number(event.location.longitude);
+
+  if (
+    Number.isNaN(latitude) ||
+    Number.isNaN(longitude)
+  ) {
+    return null;
+  }
+
+  return {
+    latitude,
+    longitude,
+  };
+}
+
+function getEventLocationLabel(event) {
+  if (event.locationLabel) {
+    return String(event.locationLabel);
+  }
+
+  const coordinate = getEventCoordinate(event);
+
+  if (coordinate) {
+    return `${coordinate.latitude.toFixed(5)}, ${coordinate.longitude.toFixed(5)}`;
+  }
+
+  return String(event.location || '');
 }
 
 const styles = StyleSheet.create({
@@ -229,6 +347,40 @@ const styles = StyleSheet.create({
   card: {
     padding: 16,
     marginBottom: 16,
+  },
+
+  dateGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+
+  dateCell: {
+    flex: 1,
+    minHeight: 70,
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+  },
+
+  dateLabel: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '700',
+  },
+
+  dateValue: {
+    marginTop: 4,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '800',
+  },
+
+  map: {
+    width: '100%',
+    height: 190,
+    marginTop: 12,
+    borderRadius: 12,
   },
 
   sectionTitle: {
