@@ -17,6 +17,11 @@ import {
 } from '@react-navigation/native-stack';
 
 import {
+  getFocusedRouteNameFromRoute,
+  StackActions,
+} from '@react-navigation/native';
+
+import {
   mdiAccount,
   mdiAccountGroup,
   mdiAccountGroupOutline,
@@ -115,6 +120,40 @@ const TAB_ICONS = {
     inactive: mdiAccountOutline,
   },
 };
+
+const HIDDEN_TAB_SCREENS = [
+  ROUTES.CHAT_DETAIL,
+];
+
+const TAB_INITIAL_ROUTES = {
+  HubTab: ROUTES.HUB,
+  EventsTab: ROUTES.DISCOVER,
+  CommunitiesTab: ROUTES.COMMUNITY_LIST,
+  MarketTab: ROUTES.MARKET_HOME,
+  ChatTab: ROUTES.CHAT_LIST,
+  ProfileTab: ROUTES.PROFILE,
+};
+
+function createTabResetListeners(initialRouteName) {
+  return ({navigation, route}) => ({
+    tabPress: event => {
+      event.preventDefault();
+
+      const nestedStackKey = route.state?.key;
+
+      if (nestedStackKey) {
+        navigation.dispatch({
+          ...StackActions.popToTop(),
+          target: nestedStackKey,
+        });
+      }
+
+      navigation.navigate(route.name, {
+        screen: initialRouteName,
+      });
+    },
+  });
+}
 
 export function RootNavigator() {
   const {
@@ -445,6 +484,8 @@ function MainTabs() {
     <Tab.Navigator
       screenOptions={({route}) => {
         const selectedIcons = TAB_ICONS[route.name];
+        const focusedRouteName = getFocusedRouteNameFromRoute(route);
+        const shouldHideTabBar = HIDDEN_TAB_SCREENS.includes(focusedRouteName);
 
         return {
           headerShown: false,
@@ -480,23 +521,26 @@ function MainTabs() {
             </View>
           ),
 
-          tabBarStyle: [
-            styles.tabBar,
-            {
-              backgroundColor:
-                theme.mode === 'dark'
-                  ? 'rgba(15,27,45,0.94)'
-                  : 'rgba(248,249,255,0.94)',
+          tabBarStyle: shouldHideTabBar
+            ? {display: 'none'}
+            : [
+                styles.tabBar,
+                {
+                  backgroundColor:
+                    theme.mode === 'dark'
+                      ? 'rgba(15,27,45,0.94)'
+                      : 'rgba(248,249,255,0.94)',
 
-              borderTopColor:
-                theme.colors.border,
-            },
-          ],
+                  borderTopColor:
+                    theme.colors.border,
+                },
+              ],
         };
       }}>
       <Tab.Screen
         name="HubTab"
         component={HubNavigator}
+        listeners={createTabResetListeners(TAB_INITIAL_ROUTES.HubTab)}
         options={{
           title: 'Hub',
         }}
@@ -505,6 +549,7 @@ function MainTabs() {
       <Tab.Screen
         name="EventsTab"
         component={EventsNavigator}
+        listeners={createTabResetListeners(TAB_INITIAL_ROUTES.EventsTab)}
         options={{
           title: 'Discover',
         }}
@@ -513,6 +558,7 @@ function MainTabs() {
       <Tab.Screen
         name="CommunitiesTab"
         component={CommunitiesNavigator}
+        listeners={createTabResetListeners(TAB_INITIAL_ROUTES.CommunitiesTab)}
         options={{
           title: 'Community',
         }}
@@ -521,6 +567,7 @@ function MainTabs() {
       <Tab.Screen
         name="MarketTab"
         component={MarketNavigator}
+        listeners={createTabResetListeners(TAB_INITIAL_ROUTES.MarketTab)}
         options={{
           title: 'Market',
         }}
@@ -529,6 +576,7 @@ function MainTabs() {
       <Tab.Screen
         name="ChatTab"
         component={ChatNavigator}
+        listeners={createTabResetListeners(TAB_INITIAL_ROUTES.ChatTab)}
         options={{
           tabBarBadge:
             unreadChatCount > 0
@@ -542,15 +590,7 @@ function MainTabs() {
       <Tab.Screen
         name="ProfileTab"
         component={ProfileNavigator}
-        listeners={({navigation}) => ({
-          tabPress: event => {
-            event.preventDefault();
-
-            navigation.navigate('ProfileTab', {
-              screen: ROUTES.PROFILE,
-            });
-          },
-        })}
+        listeners={createTabResetListeners(TAB_INITIAL_ROUTES.ProfileTab)}
         options={{
           title: 'Profile',
         }}
