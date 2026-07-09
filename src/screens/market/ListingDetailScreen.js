@@ -13,6 +13,7 @@ import {
   mdiHeart,
   mdiHeartOutline,
 } from '@mdi/js';
+import {useBottomTabBarHeight} from '@react-navigation/bottom-tabs';
 
 import {ListingBottomActionBar} from '../../components/market/listing/ListingBottomActionBar';
 import {ListingDetailGrid} from '../../components/market/listing/ListingDetailGrid';
@@ -40,6 +41,7 @@ import {
 
 export function ListingDetailScreen({navigation}) {
   const {profile, user} = useAuth();
+  const tabBarHeight = useBottomTabBarHeight();
   const {startDirectChat} = useChats();
   const {selectedListing} = useMarket();
   const {
@@ -100,6 +102,14 @@ export function ListingDetailScreen({navigation}) {
       return;
     }
 
+    if (isOwnListing) {
+      Alert.alert(
+        'Kendi ilanın',
+        'Kendi ilanını kaydetmene gerek yok. İlanlarını profilindeki market bölümünden yönetebilirsin.',
+      );
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -113,6 +123,41 @@ export function ListingDetailScreen({navigation}) {
     } finally {
       setSaving(false);
     }
+  }
+
+  function handleMoreActions() {
+    if (isOwnListing) {
+      Alert.alert('İlan seçenekleri', 'Bu ilan sana ait.', [
+        {
+          text: 'İlanlarım',
+          onPress: () => navigation.navigate(ROUTES.MY_LISTINGS),
+        },
+        {
+          text: 'Kapat',
+          style: 'cancel',
+        },
+      ]);
+      return;
+    }
+
+    Alert.alert('İlan seçenekleri', 'Bu ilan için ne yapmak istiyorsun?', [
+      {
+        text: 'Satıcıya mesaj at',
+        onPress: handleMessageSeller,
+      },
+      {
+        text: 'Şikayet et',
+        onPress: () =>
+          Alert.alert(
+            'Şikayet alındı',
+            'Şikayet akışı henüz backend tarafına bağlanmadı.',
+          ),
+      },
+      {
+        text: 'Kapat',
+        style: 'cancel',
+      },
+    ]);
   }
 
   async function handleMessageSeller() {
@@ -146,7 +191,10 @@ export function ListingDetailScreen({navigation}) {
   return (
     <View style={styles.root}>
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          {paddingBottom: tabBarHeight + 152},
+        ]}
         showsVerticalScrollIndicator={false}>
         <View style={styles.heroWrap}>
           <ListingImageGallery
@@ -159,14 +207,17 @@ export function ListingDetailScreen({navigation}) {
               <MdiIcon path={mdiArrowLeft} size={24} color="#0F172A" />
             </Pressable>
             <View style={styles.rightActions}>
-              <Pressable onPress={handleSave} style={styles.iconButton}>
+              <Pressable
+                disabled={saving}
+                onPress={handleSave}
+                style={[styles.iconButton, isOwnListing && styles.iconButtonDisabled]}>
                 <MdiIcon
                   path={isSaved ? mdiHeart : mdiHeartOutline}
                   size={23}
-                  color={isSaved ? '#DC2626' : '#0F172A'}
+                  color={isOwnListing ? '#94A3B8' : isSaved ? '#DC2626' : '#0F172A'}
                 />
               </Pressable>
-              <Pressable style={styles.iconButton}>
+              <Pressable onPress={handleMoreActions} style={styles.iconButton}>
                 <MdiIcon path={mdiDotsVertical} size={23} color="#0F172A" />
               </Pressable>
             </View>
@@ -243,6 +294,7 @@ export function ListingDetailScreen({navigation}) {
       </ScrollView>
 
       <ListingBottomActionBar
+        bottomOffset={tabBarHeight}
         isOwnListing={isOwnListing}
         saving={saving}
         startingChat={startingChat}
@@ -256,7 +308,7 @@ export function ListingDetailScreen({navigation}) {
 const styles = StyleSheet.create({
   root: {flex: 1, backgroundColor: '#F8FAFC'},
   emptyRoot: {flex: 1, backgroundColor: '#F8FAFC'},
-  content: {paddingBottom: 104},
+  content: {},
   heroWrap: {backgroundColor: '#E2E8F0'},
   topActions: {
     position: 'absolute',
@@ -280,6 +332,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 12,
     elevation: 4,
+  },
+  iconButtonDisabled: {
+    opacity: 0.62,
   },
   body: {gap: 14, padding: 16},
   description: {color: '#334155', fontSize: 14, lineHeight: 22, fontWeight: '600'},
