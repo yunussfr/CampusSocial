@@ -16,6 +16,19 @@ import { useAuth } from '../../context/AuthContext';
 import { useCommunities } from '../../context/CommunityContext';
 import { useSaved } from '../../context/SavedContext';
 
+const FEEDBACK_DURATION_MS = 1600;
+
+function getCommunityMemberIds(community) {
+  const ids = [
+    ...(Array.isArray(community?.memberIds) ? community.memberIds : []),
+    ...(Array.isArray(community?.members) ? community.members : []),
+  ];
+
+  return ids
+    .map(member => (typeof member === 'string' ? member : member?.userId || member?.uid))
+    .filter(Boolean);
+}
+
 export function CommunityDetailScreen({ navigation, route }) {
   const { profile, user } = useAuth();
   const {
@@ -36,14 +49,54 @@ export function CommunityDetailScreen({ navigation, route }) {
   } = useSaved();
   const [postContent, setPostContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [membershipSubmitting, setMembershipSubmitting] = useState(false);
+  const [optimisticMemberDelta, setOptimisticMemberDelta] = useState(0);
+  const [membershipStatus, setMembershipStatus] = useState(null);
+  const [membershipAction, setMembershipAction] = useState(null);
+  const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [membershipError, setMembershipError] = useState('');
   const communityId = route.params?.communityId;
 
   const community = useMemo(
-    () =>
-      selectedCommunity ||
-      communities.find(item => item.id === communityId),
+    () => {
+      const liveCommunity = communities.find(item => item.id === communityId);
+
+      return liveCommunity || selectedCommunity;
+    },
     [communities, communityId, selectedCommunity],
   );
+
+  const joinedCommunityIds = useMemo(() => {
+    return [
+      ...(Array.isArray(profile?.joinedCommunityIds) ? profile.joinedCommunityIds : []),
+      ...(Array.isArray(user?.joinedCommunityIds) ? user.joinedCommunityIds : []),
+    ];
+  }, [profile?.joinedCommunityIds, user?.joinedCommunityIds]);
+
+  const serverMembership = useMemo(() => {
+    if (!user?.uid || !community?.id) {
+      return false;
+    }
+
+    return (
+      joinedCommunityIds.includes(community.id) ||
+      getCommunityMemberIds(community).includes(user.uid)
+    );
+  }, [community, joinedCommunityIds, user?.uid]);
+
+  const isMember = membershipStatus ?? serverMembership;
+  const displayedMemberCount = Math.max(
+    0,
+    Number(community?.memberCount || 0) + optimisticMemberDelta,
+  );
+  const membershipButtonLabel = feedbackMessage ||
+    (membershipSubmitting
+      ? membershipAction === 'leave'
+        ? 'Çıkarılıyor...'
+        : 'Ekleniyor...'
+      : isMember
+        ? 'Ayrıl'
+        : 'Katıl');
 
   useEffect(() => {
     if (!communityId) {
@@ -63,6 +116,25 @@ export function CommunityDetailScreen({ navigation, route }) {
     return startSavesListener(user.uid);
   }, [startSavesListener, user?.uid]);
 
+  useEffect(() => {
+    setMembershipStatus(null);
+    setMembershipAction(null);
+    setOptimisticMemberDelta(0);
+    setMembershipError('');
+  }, [community?.id, community?.memberCount, serverMembership]);
+
+  useEffect(() => {
+    if (!feedbackMessage) {
+      return undefined;
+    }
+
+    const timeout = setTimeout(() => {
+      setFeedbackMessage('');
+    }, FEEDBACK_DURATION_MS);
+
+    return () => clearTimeout(timeout);
+  }, [feedbackMessage]);
+
   if (!community) {
     return (
       <View style={styles.centerContent}>
@@ -71,23 +143,36 @@ export function CommunityDetailScreen({ navigation, route }) {
     );
   }
 
-  async function handleJoin() {
-    setSubmitting(true);
-
-    try {
-      await joinSelectedCommunity(community.id, user.uid);
-    } finally {
-      setSubmitting(false);
+  async function handleToggleMembership() {
+    if (!user?.uid || !community?.id || membershipSubmitting) {
+      return;
     }
-  }
 
-  async function handleLeave() {
-    setSubmitting(true);
+    const nextIsMember = !isMember;
+    const delta = nextIsMember ? 1 : -1;
+    const nextAction = nextIsMember ? 'join' : 'leave';
+
+    setMembershipSubmitting(true);
+    setMembershipAction(nextAction);
+    setMembershipError('');
+    setMembershipStatus(nextIsMember);
+    setOptimisticMemberDelta(delta);
 
     try {
-      await leaveSelectedCommunity(community.id, user.uid);
+      if (nextIsMember) {
+        await joinSelectedCommunity(community.id, user.uid);
+        setFeedbackMessage("Hub'a eklendi");
+      } else {
+        await leaveSelectedCommunity(community.id, user.uid);
+        setFeedbackMessage("Hub'dan çıkarıldı");
+      }
+    } catch (error) {
+      setMembershipStatus(isMember);
+      setOptimisticMemberDelta(0);
+      setMembershipError(error.message || 'Üyelik işlemi tamamlanamadı.');
     } finally {
-      setSubmitting(false);
+      setMembershipSubmitting(false);
+      setMembershipAction(null);
     }
   }
 
@@ -141,23 +226,32 @@ export function CommunityDetailScreen({ navigation, route }) {
           />
           <Text style={styles.title}>{community.name}</Text>
           <Text style={styles.meta}>
-            {community.category} - {community.memberCount} uye
+            {community.category} - {displayedMemberCount} üye
           </Text>
           <Text style={styles.description}>{community.description}</Text>
-          <View style={styles.actions}>
-            <Pressable
-              disabled={submitting}
-              onPress={handleJoin}
-              style={styles.primaryButton}>
-              <Text style={styles.primaryButtonText}>Katil</Text>
-            </Pressable>
-            <Pressable
-              disabled={submitting}
-              onPress={handleLeave}
-              style={styles.secondaryButton}>
-              <Text style={styles.secondaryButtonText}>Ayril</Text>
-            </Pressable>
-          </View>
+          <Pressable
+            disabled={membershipSubmitting || !user?.uid}
+            onPress={handleToggleMembership}
+            style={[
+              styles.membershipButton,
+              isMember ? styles.leaveButton : styles.joinButton,
+              membershipSubmitting && styles.disabledButton,
+              feedbackMessage &&
+                (isMember ? styles.feedbackButton : styles.leaveFeedbackButton),
+            ]}>
+            <Text
+              style={[
+                styles.membershipButtonText,
+                isMember && !feedbackMessage
+                  ? styles.leaveButtonText
+                  : styles.joinButtonText,
+              ]}>
+              {membershipButtonLabel}
+            </Text>
+          </Pressable>
+          {membershipError ? (
+            <Text style={styles.membershipError}>{membershipError}</Text>
+          ) : null}
           <Text style={styles.sectionTitle}>Yeni post</Text>
           <TextInput
             multiline
@@ -255,10 +349,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
   },
-  actions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
   primaryButton: {
     flex: 1,
     alignItems: 'center',
@@ -272,20 +362,45 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
   },
-  secondaryButton: {
-    flex: 1,
+  membershipButton: {
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 46,
+    borderRadius: 10,
+  },
+  joinButton: {
+    backgroundColor: '#004AC6',
+  },
+  leaveButton: {
     borderWidth: 1,
     borderColor: '#CBD5E1',
-    borderRadius: 10,
     backgroundColor: '#FFFFFF',
   },
-  secondaryButtonText: {
-    color: '#0B1C30',
+  feedbackButton: {
+    borderWidth: 0,
+    backgroundColor: '#16A34A',
+  },
+  leaveFeedbackButton: {
+    borderWidth: 0,
+    backgroundColor: '#DC2626',
+  },
+  disabledButton: {
+    opacity: 0.72,
+  },
+  membershipButtonText: {
     fontSize: 15,
     fontWeight: '700',
+  },
+  joinButtonText: {
+    color: '#FFFFFF',
+  },
+  leaveButtonText: {
+    color: '#0B1C30',
+  },
+  membershipError: {
+    color: '#DC2626',
+    fontSize: 13,
+    lineHeight: 18,
   },
   sectionTitle: {
     color: '#0B1C30',

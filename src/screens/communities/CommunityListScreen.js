@@ -285,7 +285,7 @@ export function CommunityListScreen({navigation}) {
         contentContainerStyle={[
           styles.listContent,
           {
-            paddingBottom: tabBarHeight + 28,
+            paddingBottom: tabBarHeight + 52,
             backgroundColor: theme.colors.background,
           },
         ]}
@@ -396,7 +396,7 @@ export function CommunityListScreen({navigation}) {
               </View>
             ) : null}
 
-            {recommendedCommunities.length > 0 ? (
+            {!safeAppliedFilters.recommendedOnly && recommendedCommunities.length > 0 ? (
               <>
                 <CommunitySectionHeader
                   actionLabel="Tumunu Gor"
@@ -423,10 +423,6 @@ export function CommunityListScreen({navigation}) {
                   showsHorizontalScrollIndicator={false}
                 />
               </>
-            ) : communities.length > 0 && !loading ? (
-              <View style={styles.inlineState}>
-                <CommunityEmptyState theme={theme} type="recommendation" />
-              </View>
             ) : null}
 
             <CommunitySectionHeader
