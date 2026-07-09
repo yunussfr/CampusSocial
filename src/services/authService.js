@@ -124,6 +124,7 @@ export async function updateUserProfile(uid, profile) {
     interests: profile.interests || [],
     bio: profile.bio.trim(),
     photoURL: profile.photoURL || '',
+    ...(profile.profileTheme ? { profileTheme: profile.profileTheme } : {}),
     updatedAt: firestore.FieldValue.serverTimestamp(),
   };
 
