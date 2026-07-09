@@ -10,6 +10,7 @@ import {
   markNotificationsRead,
   markChatRead,
   sendMessage,
+  subscribeToChat,
   subscribeToChats,
   subscribeToMessages,
   subscribeToNotifications,
@@ -55,6 +56,25 @@ export function ChatProvider({ children }) {
       onError: listenerError => {
         setError(listenerError.message);
         setLoading(false);
+      },
+    });
+  }, []);
+
+  const startActiveChatListener = useCallback(chatId => {
+    if (!chatId) {
+      setActiveChat(null);
+      return () => {};
+    }
+
+    setError(null);
+
+    return subscribeToChat({
+      chatId,
+      onData: nextChat => {
+        setActiveChat(nextChat);
+      },
+      onError: listenerError => {
+        setError(listenerError.message);
       },
     });
   }, []);
@@ -105,6 +125,7 @@ export function ChatProvider({ children }) {
       sendChatMessage,
       setChats,
       setActiveChat,
+      startActiveChatListener,
       startChatsListener,
       startDirectChat,
       startMessagesListener,
@@ -120,6 +141,7 @@ export function ChatProvider({ children }) {
       messages,
       notifications,
       sendChatMessage,
+      startActiveChatListener,
       startDirectChat,
       startChatsListener,
       startMessagesListener,

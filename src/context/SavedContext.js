@@ -22,6 +22,14 @@ export function SavedProvider({ children }) {
   const [error, setError] = useState(null);
 
   const startSavesListener = useCallback(userId => {
+    if (!userId) {
+      setSaves([]);
+      setLoading(false);
+      setError(null);
+
+      return () => {};
+    }
+
     setLoading(true);
     setError(null);
 
