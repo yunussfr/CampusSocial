@@ -270,7 +270,7 @@ export function MarketHomeScreen({navigation}) {
         contentContainerStyle={[
           styles.listContent,
           {
-            paddingBottom: tabBarHeight + 28,
+            paddingBottom: tabBarHeight + 52,
             backgroundColor: theme.colors.background,
           },
         ]}

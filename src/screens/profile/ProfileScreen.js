@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {
   Image,
   Pressable,
@@ -19,12 +19,17 @@ import {
   mdiMapMarkerOutline,
   mdiPencilOutline,
   mdiSchoolOutline,
-  mdiShieldAccountOutline,
   mdiStarCircleOutline,
 } from '@mdi/js';
+import {ProfileHeaderBackground} from '../../components/profile/ProfileHeaderBackground';
+import {ProfileThemeSelector} from '../../components/profile/ProfileThemeSelector';
 import {Card} from '../../components/ui/DesignSystem';
 import {MdiIcon} from '../../components/ui/MdiIcon';
 import {getProfilePlaceholder} from '../../constants/assets';
+import {
+  getProfileTheme,
+  PROFILE_THEME_FALLBACK_ID,
+} from '../../constants/profileThemes';
 import {ROUTES} from '../../constants/routes';
 import {useAuth} from '../../context/AuthContext';
 import {useChats} from '../../context/ChatContext';
@@ -79,11 +84,16 @@ function getItemSubtitle(item) {
 }
 
 export function ProfileScreen({navigation}) {
-  const {profile, user} = useAuth();
+  const {profile, updateProfile, user} = useAuth();
   const {notifications, startNotificationsListener} = useChats();
   const {theme} = useTheme();
   const tabBarHeight = useBottomTabBarHeight();
   const colors = {...FALLBACK_COLORS, ...(theme?.colors || {})};
+  const [selectedThemeId, setSelectedThemeId] = useState(
+    profile?.profileTheme || PROFILE_THEME_FALLBACK_ID,
+  );
+  const [savingTheme, setSavingTheme] = useState(false);
+  const selectedProfileTheme = getProfileTheme(selectedThemeId);
 
   const interests = useMemo(() => asArray(profile?.interests), [profile]);
   const achievements = useMemo(() => asArray(profile?.achievements), [profile]);
@@ -104,6 +114,10 @@ export function ProfileScreen({navigation}) {
 
     return startNotificationsListener(user.uid);
   }, [startNotificationsListener, user?.uid]);
+
+  useEffect(() => {
+    setSelectedThemeId(profile?.profileTheme || PROFILE_THEME_FALLBACK_ID);
+  }, [profile?.profileTheme]);
 
   const name = profile?.displayName || 'Profil';
   const department = getDisplayValue(profile?.department);
@@ -135,6 +149,32 @@ export function ProfileScreen({navigation}) {
     },
   ];
 
+  async function handleSelectTheme(themeId) {
+    if (savingTheme || themeId === selectedThemeId) {
+      return;
+    }
+
+    const previousThemeId = selectedThemeId;
+    setSelectedThemeId(themeId);
+    setSavingTheme(true);
+
+    const nextProfile = await updateProfile({
+      displayName: profile?.displayName || user?.displayName || '',
+      department: profile?.department || '',
+      year: profile?.year || '',
+      bio: profile?.bio || '',
+      photoURL: profile?.photoURL || user?.photoURL || '',
+      interests: Array.isArray(profile?.interests) ? profile.interests : [],
+      profileTheme: themeId,
+    });
+
+    if (!nextProfile) {
+      setSelectedThemeId(previousThemeId);
+    }
+
+    setSavingTheme(false);
+  }
+
   return (
     <ScrollView
       contentContainerStyle={[
@@ -147,15 +187,9 @@ export function ProfileScreen({navigation}) {
       showsVerticalScrollIndicator={false}>
      
 
-      <LinearGradient
-        colors={['#1D4ED8', '#2563EB', '#4F46E5']}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}
+      <ProfileHeaderBackground
+        profileTheme={selectedThemeId}
         style={styles.hero}>
-        <View style={styles.heroOrbLarge} />
-        <View style={styles.heroOrbSmall} />
-
-
         <View style={styles.heroContent}>
           <View style={styles.avatarFrame}>
             <Image source={avatarSource} style={styles.avatar} />
@@ -170,23 +204,43 @@ export function ProfileScreen({navigation}) {
           </View>
 
           <View style={styles.heroText}>
-            <Text numberOfLines={2} style={styles.heroName}>
+            <Text
+              numberOfLines={2}
+              style={[
+                styles.heroName,
+                {color: selectedProfileTheme.textColor},
+              ]}>
               {name}
             </Text>
             {educationText ? (
-              <Text numberOfLines={2} style={styles.heroSubtitle}>
+              <Text
+                numberOfLines={2}
+                style={[
+                  styles.heroSubtitle,
+                  {color: selectedProfileTheme.mutedTextColor},
+                ]}>
                 {educationText}
               </Text>
             ) : null}
             <View style={styles.heroMetaRow}>
               {university ? (
-                <MetaPill icon={mdiSchoolOutline} text={university} />
+                <MetaPill
+                  color={selectedProfileTheme.mutedTextColor}
+                  icon={mdiSchoolOutline}
+                  text={university}
+                />
               ) : null}
-              {campus ? <MetaPill icon={mdiMapMarkerOutline} text={campus} /> : null}
+              {campus ? (
+                <MetaPill
+                  color={selectedProfileTheme.mutedTextColor}
+                  icon={mdiMapMarkerOutline}
+                  text={campus}
+                />
+              ) : null}
             </View>
           </View>
         </View>
-      </LinearGradient>
+      </ProfileHeaderBackground>
 
       <View style={styles.statsRow}>
         <StatCard
@@ -297,22 +351,25 @@ export function ProfileScreen({navigation}) {
             onPress={item.onPress}
           />
         ))}
-        <ActionTile
-          colors={colors}
-          disabled
-          icon={mdiShieldAccountOutline}
-          label="Gizlilik"
-        />
       </View>
+
+      <Card style={styles.themeCard}>
+        <ProfileThemeSelector
+          colors={colors}
+          disabled={savingTheme}
+          onSelectTheme={handleSelectTheme}
+          selectedThemeId={selectedThemeId}
+        />
+      </Card>
     </ScrollView>
   );
 }
 
-function MetaPill({icon, text}) {
+function MetaPill({color = 'rgba(255,255,255,0.86)', icon, text}) {
   return (
     <View style={styles.metaPill}>
-      <MdiIcon path={icon} size={16} color="rgba(255,255,255,0.86)" />
-      <Text numberOfLines={1} style={styles.metaPillText}>
+      <MdiIcon path={icon} size={16} color={color} />
+      <Text numberOfLines={1} style={[styles.metaPillText, {color}]}>
         {text}
       </Text>
     </View>
@@ -638,6 +695,10 @@ const styles = StyleSheet.create({
   },
   sectionCard: {
     gap: 12,
+    padding: 16,
+    borderRadius: 18,
+  },
+  themeCard: {
     padding: 16,
     borderRadius: 18,
   },

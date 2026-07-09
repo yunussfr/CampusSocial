@@ -316,7 +316,7 @@ export function HubScreen({navigation}) {
              * son kullanıcı kartının tab bar altında
              * kalmasını engeller.
              */
-            paddingBottom: tabBarHeight + 24,
+            paddingBottom: tabBarHeight + 48,
           },
         ]}>
         {/* Sayfa başlığı */}

@@ -41,6 +41,27 @@ export function subscribeToChats({ userId, onData, onError }) {
     );
 }
 
+export function subscribeToChat({ chatId, onData, onError }) {
+  return firestoreDb
+    .collection(COLLECTIONS.CHATS)
+    .doc(chatId)
+    .onSnapshot(
+      doc => {
+        if (!doc.exists) {
+          onData(null);
+          return;
+        }
+
+        onData(mapDoc(doc));
+      },
+      error => {
+        if (onError) {
+          onError(error);
+        }
+      },
+    );
+}
+
 export function subscribeToMessages({ chatId, onData, onError }) {
   return firestoreDb
     .collection(COLLECTIONS.CHATS)
@@ -67,10 +88,9 @@ export async function createOrGetDirectChat({
     ? `${participantIds.join('_')}_${relatedListingId}`
     : participantIds.join('_');
   const chatRef = firestoreDb.collection(COLLECTIONS.CHATS).doc(chatId);
-  const chatDoc = await chatRef.get();
 
-  if (!chatDoc.exists) {
-    await chatRef.set({
+  await chatRef.set(
+    {
       participants: participantIds,
       participantProfiles: {
         [currentUser.uid]: {
@@ -85,15 +105,10 @@ export async function createOrGetDirectChat({
         },
       },
       relatedListingId: relatedListingId || null,
-      lastMessage: null,
-      unreadCounts: {
-        [currentUser.uid]: 0,
-        [otherUser.uid]: 0,
-      },
-      createdAt: firestore.FieldValue.serverTimestamp(),
       updatedAt: firestore.FieldValue.serverTimestamp(),
-    });
-  }
+    },
+    { merge: true },
+  );
 
   return chatId;
 }

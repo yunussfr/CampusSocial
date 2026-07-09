@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -12,9 +12,15 @@ import {
   Text,
   View,
 } from 'react-native';
+import {ProfileHeaderBackground} from '../../components/profile/ProfileHeaderBackground';
+import {
+  getProfileTheme,
+  PROFILE_THEME_FALLBACK_ID,
+} from '../../constants/profileThemes';
 import { ROUTES } from '../../constants/routes';
 import { useAuth } from '../../context/AuthContext';
 import { useChats } from '../../context/ChatContext';
+import { getUserProfile } from '../../services/authService';
 
 const COLORS = {
   bg: '#F8FAFC',
@@ -140,10 +146,12 @@ export function UserProfileScreen({ route, navigation }) {
   const { followProfile, profile, unfollowProfile, user } = useAuth();
   const { startDirectChat } = useChats();
   const [following, setFollowing] = useState(false);
+  const [remoteProfile, setRemoteProfile] = useState(null);
   const [startingChat, setStartingChat] = useState(false);
   const [saving, setSaving] = useState(false);
-  const userProfile = route.params?.userProfile;
-  const userId = route.params?.userId || userProfile?.uid;
+  const routeProfile = route.params?.userProfile;
+  const userId = route.params?.userId || routeProfile?.uid || routeProfile?.id;
+  const userProfile = remoteProfile || routeProfile;
 
   const displayName = getDisplayName(userProfile);
   const avatarLetter = getAvatarLetter(displayName);
@@ -153,6 +161,39 @@ export function UserProfileScreen({ route, navigation }) {
     userProfile?.recentEvents || userProfile?.activities,
   );
   const bio = userProfile?.bio || 'Profil bilgisi yok.';
+  const selectedProfileTheme = getProfileTheme(
+    userProfile?.profileTheme || PROFILE_THEME_FALLBACK_ID,
+  );
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadUserProfile() {
+      if (!userId) {
+        setRemoteProfile(null);
+        return;
+      }
+
+      try {
+        const nextProfile = await getUserProfile(userId);
+
+        if (active) {
+          setRemoteProfile(nextProfile);
+        }
+      } catch {
+        if (active) {
+          setRemoteProfile(null);
+        }
+      }
+    }
+
+    setRemoteProfile(null);
+    loadUserProfile();
+
+    return () => {
+      active = false;
+    };
+  }, [userId]);
 
   const profileMeta = useMemo(() => {
     const items = [];
@@ -237,9 +278,9 @@ export function UserProfileScreen({ route, navigation }) {
       <ScrollView
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}>
-        <View style={styles.hero}>
-          <View style={styles.heroDecorTop} />
-          <View style={styles.heroDecorBottom} />
+        <ProfileHeaderBackground
+          profileTheme={selectedProfileTheme.id}
+          style={styles.hero}>
           <View style={styles.header}>
             <Pressable
               accessibilityRole="button"
@@ -247,7 +288,13 @@ export function UserProfileScreen({ route, navigation }) {
               style={styles.headerIconButton}>
               <Text style={styles.headerIcon}>‹</Text>
             </Pressable>
-            <Text style={styles.headerTitle}>Kullanıcı Profili</Text>
+            <Text
+              style={[
+                styles.headerTitle,
+                {color: selectedProfileTheme.textColor},
+              ]}>
+              Kullanıcı Profili
+            </Text>
             <View style={styles.headerActions}>
               <View style={styles.headerIconButton}>
                 <Text style={styles.headerEmoji}>♡</Text>
@@ -271,20 +318,42 @@ export function UserProfileScreen({ route, navigation }) {
             </View>
 
             <View style={styles.profileInfo}>
-              <Text style={styles.displayName}>{displayName}</Text>
-              <Text style={styles.userId} numberOfLines={1}>
+              <Text
+                style={[
+                  styles.displayName,
+                  {color: selectedProfileTheme.textColor},
+                ]}>
+                {displayName}
+              </Text>
+              <Text
+                style={[
+                  styles.userId,
+                  {color: selectedProfileTheme.mutedTextColor},
+                ]}
+                numberOfLines={1}>
                 {userProfile?.department || userId || 'Profil detayı'}
               </Text>
               {profileMeta.length ? (
-                <Text style={styles.metaText} numberOfLines={2}>
+                <Text
+                  style={[
+                    styles.metaText,
+                    {color: selectedProfileTheme.mutedTextColor},
+                  ]}
+                  numberOfLines={2}>
                   {profileMeta.join('  •  ')}
                 </Text>
               ) : null}
             </View>
           </View>
 
-          <Text style={styles.quoteText}>“ {bio}</Text>
-        </View>
+          <Text
+            style={[
+              styles.quoteText,
+              {color: selectedProfileTheme.mutedTextColor},
+            ]}>
+            “ {bio}
+          </Text>
+        </ProfileHeaderBackground>
 
         <View style={styles.statsCard}>
           <StatItem
