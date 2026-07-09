@@ -169,7 +169,14 @@ export function AppButton({ children, onPress, disabled, variant = 'primary', st
   );
 }
 
-export function AppInput({ leftIcon, leftIconTintColor, rightIcon, rightIconTintColor, ...props }) {
+export function AppInput({
+  inputStyle,
+  leftIcon,
+  leftIconTintColor,
+  rightIcon,
+  rightIconTintColor,
+  ...props
+}) {
   const { theme } = useTheme();
 
   return (
@@ -211,6 +218,7 @@ export function AppInput({ leftIcon, leftIconTintColor, rightIcon, rightIconTint
           leftIcon && styles.inputWithLeftIcon,
           rightIcon && styles.inputWithRightIcon,
           props.multiline && styles.multilineInput,
+          inputStyle,
         ]}
       />
     </View>
@@ -356,8 +364,9 @@ screenContent: {
   paddingBottom: 140,
 },
   brandHeader: {
-    minHeight: 64,
+    minHeight: 76,
     paddingHorizontal: 16,
+    paddingTop: 12,
     borderBottomWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
