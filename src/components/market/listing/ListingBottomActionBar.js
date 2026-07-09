@@ -3,15 +3,21 @@ import {Pressable, StyleSheet, Text, View} from 'react-native';
 
 export function ListingBottomActionBar({
   isOwnListing,
+  bottomOffset = 0,
   saving,
   startingChat,
   onSave,
   onMessage,
 }) {
   return (
-    <View style={styles.bar}>
-      <Pressable disabled={saving} onPress={onSave} style={styles.secondary}>
-        <Text style={styles.secondaryText}>{saving ? 'Kaydediliyor...' : 'Teklifi Gorus'}</Text>
+    <View style={[styles.bar, {bottom: bottomOffset}]}>
+      <Pressable
+        disabled={saving || isOwnListing}
+        onPress={onSave}
+        style={[styles.secondary, isOwnListing && styles.disabled]}>
+        <Text style={styles.secondaryText}>
+          {isOwnListing ? 'Kendi Ilanin' : saving ? 'Kaydediliyor...' : 'Kaydet'}
+        </Text>
       </Pressable>
       {!isOwnListing ? (
         <Pressable disabled={startingChat} onPress={onMessage} style={styles.primary}>
@@ -51,6 +57,9 @@ const styles = StyleSheet.create({
     borderWidth: 1.2,
     borderColor: '#4F46E5',
     borderRadius: 13,
+  },
+  disabled: {
+    opacity: 0.62,
   },
   secondaryText: {color: '#4F46E5', fontSize: 14, fontWeight: '900'},
   primary: {flex: 1.35, minHeight: 50, alignItems: 'center', justifyContent: 'center', borderRadius: 13, backgroundColor: '#4F46E5'},
