@@ -1,1203 +1,542 @@
-import React, {
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
-
+import React, {useEffect, useMemo, useState} from 'react';
 import {
-  FlatList,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   useWindowDimensions,
   View,
 } from 'react-native';
-
-import LinearGradient from 'react-native-linear-gradient';
 import {useBottomTabBarHeight} from '@react-navigation/bottom-tabs';
+import LinearGradient from 'react-native-linear-gradient';
 
-import {
-  mdiAccountGroupOutline,
-  mdiBasketball,
-  mdiBellOutline,
-  mdiMagnify,
-  mdiMusicNote,
-  mdiPaletteOutline,
-  mdiPlus,
-  mdiSchoolOutline,
-  mdiTrophyOutline,
-  mdiViewGridOutline,
-} from '@mdi/js';
-
-import {
-  BrandHeader,
-  Screen,
-  StateView,
-} from '../../components/ui/DesignSystem';
-
-import {MdiIcon} from '../../components/ui/MdiIcon';
-
-import FeaturedEventCard from '../../components/events/FeaturedEventCard';
-import ActiveCommunityCard from '../../components/events/ActiveCommunityCard';
-import UpcomingEventRow from '../../components/events/UpcomingEventRow';
-
-import {IMAGES} from '../../constants/assets';
+import {CategoryFilterBar} from '../../components/discover/CategoryFilterBar';
+import {DiscoverStatsStrip} from '../../components/discover/DiscoverStatsStrip';
+import {FeaturedEventCard} from '../../components/discover/FeaturedEventCard';
+import {LiveEventCard} from '../../components/discover/LiveEventCard';
+import {PopularCommunityCard} from '../../components/discover/PopularCommunityCard';
+import {SectionHeader} from '../../components/discover/SectionHeader';
+import {UpcomingEventCard} from '../../components/discover/UpcomingEventCard';
+import {AppInput, Screen, StateView} from '../../components/ui/DesignSystem';
+import {IconButton} from '../../components/ui/IconButton';
+import {DISCOVER_CATEGORIES} from '../../constants/discoverCategories';
+import {ICONS} from '../../constants/assets';
 import {ROUTES} from '../../constants/routes';
-
+import {useAuth} from '../../context/AuthContext';
 import {useCommunities} from '../../context/CommunityContext';
 import {useEvents} from '../../context/EventContext';
 import {useTheme} from '../../context/ThemeContext';
+import {
+  derivePopularCommunities,
+  filterEventsByCategory,
+  getNearbyEventCount,
+  getTodayEventCount,
+  getTopCategory,
+  selectActiveEvents,
+  selectFeaturedEvents,
+  selectUpcomingEvents,
+} from '../../utils/eventSelectors';
+import {getTextValue} from '../../utils/eventFormatters';
 
-const CATEGORY_OPTIONS = [
-  {
-    key: 'all',
-    label: 'Tümü',
-    value: null,
-    icon: mdiViewGridOutline,
-  },
-  {
-    key: 'academic',
-    label: 'Akademik',
-    value: 'Akademik',
-    icon: mdiSchoolOutline,
-  },
-  {
-    key: 'education',
-    label: 'Eğitim ve Atölye',
-    value: 'Eğitim ve Atölye',
-    icon: mdiSchoolOutline,
-  },
-  {
-    key: 'career',
-    label: 'Kariyer',
-    value: 'Kariyer',
-    icon: mdiTrophyOutline,
-  },
-  {
-    key: 'technology',
-    label: 'Teknoloji',
-    value: 'Teknoloji',
-    icon: mdiViewGridOutline,
-  },
-  {
-    key: 'sports',
-    label: 'Spor',
-    value: 'Spor',
-    icon: mdiBasketball,
-  },
-  {
-    key: 'art',
-    label: 'Kültür ve Sanat',
-    value: 'Kültür ve Sanat',
-    icon: mdiPaletteOutline,
-  },
-  {
-    key: 'music',
-    label: 'Müzik',
-    value: 'Müzik',
-    icon: mdiMusicNote,
-  },
-];
+function getGreeting() {
+  const hour = new Date().getHours();
 
-const FEATURED_LIMIT = 3;
-const ACTIVE_COMMUNITY_LIMIT = 5;
-const UPCOMING_LIMIT = 8;
+  if (hour < 12) {
+    return 'Günaydın';
+  }
+
+  if (hour < 18) {
+    return 'İyi günler';
+  }
+
+  return 'İyi akşamlar';
+}
+
+function HorizontalRail({children}) {
+  return (
+    <ScrollView
+      horizontal
+      contentContainerStyle={styles.horizontalRail}
+      showsHorizontalScrollIndicator={false}>
+      {children}
+    </ScrollView>
+  );
+}
 
 export function DiscoverScreen({navigation}) {
-  const [activeCategoryKey, setActiveCategoryKey] =
-    useState('all');
+  const [activeCategoryId, setActiveCategoryId] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const [searchQuery, setSearchQuery] =
-    useState('');
-
-  const [featuredIndex, setFeaturedIndex] =
-    useState(0);
-
-  const {width: screenWidth} =
-    useWindowDimensions();
-
-  const tabBarHeight =
-    useBottomTabBarHeight();
-
+  const {width: screenWidth} = useWindowDimensions();
+  const tabBarHeight = useBottomTabBarHeight();
   const {theme} = useTheme();
-
+  const {profile} = useAuth();
+  const {events, error, loading, selectEvent, startEventsListener} = useEvents();
   const {
-    events = [],
-    error,
-    loading,
-    selectEvent,
-    startEventsListener,
-  } = useEvents();
-
-  const {
-    communities = [],
+    communities,
     selectCommunity,
     startCommunitiesListener,
   } = useCommunities();
 
-  /*
-   * EventContext ve CommunityContext içindeki
-   * Firestore listener'larını başlatır.
-   *
-   * Context provider bu listener'ları zaten
-   * merkezi olarak başlatıyorsa, burada ikinci kez
-   * listener açılmaması gerekir. Bu nokta proje
-   * yapısına göre kontrol edilmelidir.
-   */
   useEffect(() => {
-    const unsubscribeEvents =
-      startEventsListener?.();
-
-    const unsubscribeCommunities =
-      startCommunitiesListener?.();
+    const unsubscribeEvents = startEventsListener();
+    const unsubscribeCommunities = startCommunitiesListener();
 
     return () => {
-      if (
-        typeof unsubscribeEvents === 'function'
-      ) {
+      if (typeof unsubscribeEvents === 'function') {
         unsubscribeEvents();
       }
 
-      if (
-        typeof unsubscribeCommunities === 'function'
-      ) {
+      if (typeof unsubscribeCommunities === 'function') {
         unsubscribeCommunities();
       }
     };
-  }, [
-    startEventsListener,
-    startCommunitiesListener,
-  ]);
+  }, [startCommunitiesListener, startEventsListener]);
 
-  const selectedCategory = useMemo(() => {
-    return (
-      CATEGORY_OPTIONS.find(
-        category =>
-          category.key === activeCategoryKey,
-      ) || CATEGORY_OPTIONS[0]
-    );
-  }, [activeCategoryKey]);
+  const activeCategory = useMemo(() => {
+    return DISCOVER_CATEGORIES.find(category => category.id === activeCategoryId) ||
+      DISCOVER_CATEGORIES[0];
+  }, [activeCategoryId]);
 
-  /*
-   * Sadece gelecekteki etkinlikleri sıralar.
-   *
-   * Tarihi olmayan etkinlikler tamamen kaybolmasın
-   * diye listenin sonuna bırakılır.
-   */
-  const sortedFutureEvents = useMemo(() => {
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
+  const searchedEvents = useMemo(() => {
+    const normalizedQuery = normalizeText(searchQuery);
 
-    return [...events]
-      .filter(event => {
-        const date = getEventDate(event);
-
-        return !date || date >= startOfToday;
-      })
-      .sort(compareEventsByDate);
-  }, [events]);
-
-  /*
-   * Kategori ve arama sorgusunu aynı anda uygular.
-   *
-   * Arama; etkinlik adı, konum ve topluluk adı
-   * üzerinden çalışır.
-   */
-  const visibleEvents = useMemo(() => {
-    const normalizedQuery =
-      normalizeSearchText(searchQuery);
-
-    return sortedFutureEvents.filter(event => {
-      const categoryMatches =
-        !selectedCategory.value ||
-        getEventCategory(event) ===
-          selectedCategory.value;
-
-      if (!categoryMatches) {
-        return false;
-      }
-
-      if (!normalizedQuery) {
-        return true;
-      }
-
-      const searchableValues = [
-        getEventTitle(event),
-        getEventLocation(event),
-        getEventCommunityName(event),
-        getEventCategory(event),
-      ];
-
-      return searchableValues.some(value =>
-        normalizeSearchText(value).includes(
-          normalizedQuery,
-        ),
-      );
-    });
-  }, [
-    sortedFutureEvents,
-    selectedCategory,
-    searchQuery,
-  ]);
-
-  /*
-   * Öne çıkan etkinliklerin tümü yatay kaydırılır.
-   *
-   * Firebase belgesinde isFeatured veya featured
-   * alanı bulunmuyorsa ilk etkinlikler öne çıkarılır.
-   */
-  const featuredEvents = useMemo(() => {
-    const explicitlyFeatured =
-      visibleEvents.filter(
-        event =>
-          event.isFeatured === true ||
-          event.featured === true,
-      );
-
-    const source =
-      explicitlyFeatured.length > 0
-        ? explicitlyFeatured
-        : visibleEvents;
-
-    return source
-      .slice(0, FEATURED_LIMIT)
-      .map(createEventViewModel);
-  }, [visibleEvents]);
-
-  const featuredIds = useMemo(() => {
-    return new Set(
-      featuredEvents.map(event => event.id),
-    );
-  }, [featuredEvents]);
-
-  /*
-   * Öne çıkan etkinlikleri tekrar göstermeden
-   * yaklaşan etkinlikleri dikey listeye dönüştürür.
-   */
-  const upcomingEvents = useMemo(() => {
-    return visibleEvents
-      .filter(event => {
-        const id = String(
-          event.id || event.uid || '',
-        );
-
-        return !featuredIds.has(id);
-      })
-      .slice(0, UPCOMING_LIMIT)
-      .map(createEventViewModel);
-  }, [visibleEvents, featuredIds]);
-
-  /*
-   * Events belgelerinde communityId yazılmadığı için
-   * aktif topluluk sıralaması mevcut community.memberCount
-   * alanıyla yapılır.
-   */
-  const activeCommunities = useMemo(() => {
-    const normalizedQuery =
-      normalizeSearchText(searchQuery);
-
-    return communities
-      .map(community => ({
-        id: String(community.id),
-        raw: community,
-        name: community.name || 'Topluluk',
-        logoURL: community.iconURL || community.coverURL || null,
-        memberCount: getCommunityMemberCount(community),
-        activityScore: getCommunityMemberCount(community),
-      }))
-      .filter(community => {
-        if (!normalizedQuery) {
-          return true;
-        }
-
-        return normalizeSearchText(
-          community.name,
-        ).includes(normalizedQuery);
-      })
-      .sort((first, second) => {
-        if (
-          first.activityScore !==
-          second.activityScore
-        ) {
-          return (
-            second.activityScore -
-            first.activityScore
-          );
-        }
-
-        return first.name.localeCompare(
-          second.name,
-          'tr-TR',
-        );
-      })
-      .slice(0, ACTIVE_COMMUNITY_LIMIT)
-      .map((community, index) => ({
-        ...community,
-        rank: index + 1,
-      }));
-  }, [communities, searchQuery]);
-
-  const featuredCardWidth = Math.min(
-    screenWidth - 48,
-    370,
-  );
-
-  const activeCommunityCardWidth =
-    Math.min(205, screenWidth * 0.53);
-
-  const isInitialLoading =
-    loading && events.length === 0;
-
-  const hasAnyContent =
-    featuredEvents.length > 0 ||
-    upcomingEvents.length > 0 ||
-    activeCommunities.length > 0;
-
-  function openEvent(event) {
-    const sourceEvent =
-      events.find(
-        item =>
-          String(item.id || item.uid) ===
-          String(event.id),
-      ) || event.raw;
-
-    if (sourceEvent && selectEvent) {
-      selectEvent(sourceEvent);
+    if (!normalizedQuery) {
+      return events;
     }
 
-    navigation.navigate(
-      ROUTES.EVENT_DETAIL,
-      {
-        eventId: event.id,
-      },
-    );
+    return events.filter(event => {
+      const searchableText = [
+        event?.title,
+        event?.name,
+        event?.category,
+        event?.locationName,
+        event?.locationLabel,
+        event?.location,
+        event?.venue,
+        event?.place,
+        event?.communityName,
+        event?.community?.name,
+        event?.organizerName,
+        event?.organizer?.name,
+      ]
+        .map(value => normalizeText(value))
+        .join(' ');
+
+      return searchableText.includes(normalizedQuery);
+    });
+  }, [events, searchQuery]);
+
+  const filteredEvents = useMemo(() => {
+    return filterEventsByCategory(searchedEvents, activeCategory);
+  }, [activeCategory, searchedEvents]);
+
+  const featuredEvents = useMemo(() => {
+    return selectFeaturedEvents(filteredEvents, 4);
+  }, [filteredEvents]);
+
+  const upcomingEvents = useMemo(() => {
+    return selectUpcomingEvents(filteredEvents, 8);
+  }, [filteredEvents]);
+
+  const activeEvents = useMemo(() => {
+    return selectActiveEvents(filteredEvents, 3);
+  }, [filteredEvents]);
+
+  const popularCommunities = useMemo(() => {
+    const normalizedQuery = normalizeText(searchQuery);
+    const realCommunities = Array.isArray(communities) ? communities : [];
+
+    if (realCommunities.length > 0) {
+      return realCommunities
+        .filter(community => {
+          if (!normalizedQuery) {
+            return true;
+          }
+
+          return normalizeText(community?.name).includes(normalizedQuery);
+        })
+        .map(community => ({
+          id: community.id,
+          raw: community,
+          name: community.name || 'Topluluk',
+          logoURL: community.iconURL || community.logoURL || community.coverURL || null,
+          memberCount: Number(community.memberCount || 0) || null,
+          eventCount: Number(community.eventCount || 0) || 0,
+          score: Number(community.memberCount || 0) + Number(community.eventCount || 0) * 10,
+        }))
+        .sort((first, second) => second.score - first.score)
+        .slice(0, 6)
+        .map((community, index) => ({
+          ...community,
+          rank: index + 1,
+        }));
+    }
+
+    return derivePopularCommunities(searchedEvents, 6);
+  }, [communities, searchedEvents, searchQuery]);
+
+  const todayEventCount = useMemo(() => getTodayEventCount(events), [events]);
+  const topCategory = useMemo(() => getTopCategory(events), [events]);
+  const nearbyEventCount = useMemo(() => getNearbyEventCount(events), [events]);
+
+  const profileDisplayName = getTextValue(profile?.displayName, 'Campus');
+  const featuredCardWidth = Math.min(620, screenWidth - 32);
+  const upcomingCardWidth = Math.min(230, Math.max(172, (screenWidth - 48) / 2));
+  const communityCardWidth = Math.min(160, Math.max(132, screenWidth * 0.36));
+  const hasEvents = filteredEvents.length > 0;
+
+  function openEvent(event) {
+    if (!event) {
+      return;
+    }
+
+    selectEvent(event);
+
+    navigation.navigate(ROUTES.EVENT_DETAIL, {
+      eventId: event.id,
+    });
   }
 
   function openCommunity(community) {
-    if (community.raw && selectCommunity) {
+    if (!community?.id) {
+      return;
+    }
+
+    if (community.raw) {
       selectCommunity(community.raw);
     }
 
-    /*
-     * DiscoverScreen, EventsTab içinde çalışıyor.
-     * CommunityDetailScreen başka bir tab stack'inde
-     * olduğu için nested navigation kullanılıyor.
-     */
-    navigation.navigate(
-      'CommunitiesTab',
-      {
-        screen: ROUTES.COMMUNITY_DETAIL,
-        params: {
-          communityId: community.id,
-        },
+    navigation.navigate('CommunitiesTab', {
+      screen: ROUTES.COMMUNITY_DETAIL,
+      params: {
+        communityId: community.id,
       },
-    );
-  }
-
-  function openCommunityList() {
-    navigation.navigate(
-      'CommunitiesTab',
-      {
-        screen: ROUTES.COMMUNITY_LIST,
-      },
-    );
-  }
-
-  function handleFeaturedScroll(event) {
-    const offsetX =
-      event.nativeEvent.contentOffset.x;
-
-    const nextIndex = Math.round(
-      offsetX /
-        (featuredCardWidth + 12),
-    );
-
-    setFeaturedIndex(nextIndex);
+    });
   }
 
   return (
-    <>
-      <BrandHeader
-        action={
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Bildirimler"
-            hitSlop={10}
-            onPress={() =>
-              navigation.navigate(
-                ROUTES.NOTIFICATIONS,
-              )
-            }
-            style={({pressed}) => [
-              styles.headerAction,
-              {
-                borderColor:
-                  theme.colors.border,
-                backgroundColor:
-                  theme.colors.surface,
-                opacity: pressed ? 0.75 : 1,
-              },
-            ]}>
-            <MdiIcon
-              path={mdiBellOutline}
-              size={23}
-              color={theme.colors.primary}
-            />
-          </Pressable>
-        }
-      />
+    <Screen padded={false}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingBottom: tabBarHeight + 124,
+            backgroundColor: theme.colors.background || '#F8FAFC',
+          },
+        ]}
+        showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+          <View style={styles.headerTextBlock}>
+            <Text style={[styles.brandTitle, {color: theme.colors.primary}]}>
+              CampusMerge
+            </Text>
 
-      <Screen padded={false}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={[
-            styles.scrollContent,
-            {
-              paddingBottom:
-                tabBarHeight + 92,
-              backgroundColor:
-                theme.colors.background,
-            },
-          ]}>
-          <View
-            style={[
-              styles.searchContainer,
-              {
-                backgroundColor:
-                  theme.colors.surface,
-                borderColor:
-                  theme.colors.border,
-              },
-            ]}>
-            <MdiIcon
-              path={mdiMagnify}
-              size={24}
-              color={theme.colors.mutedText}
-            />
+            <Text style={[styles.greeting, {color: theme.colors.text}]}>
+              {getGreeting()}, {profileDisplayName} 👋
+            </Text>
 
-            <TextInput
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder="Etkinlik, topluluk veya mekan ara..."
-              placeholderTextColor={
-                theme.colors.mutedText
-              }
-              returnKeyType="search"
-              autoCorrect={false}
-              style={[
-                styles.searchInput,
-                {
-                  color: theme.colors.text,
-                },
-              ]}
-            />
+            <Text style={[styles.subtitle, {color: theme.colors.mutedText}]}>
+              Bugün kampüste neler oluyor keşfet.
+            </Text>
           </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={
-              styles.categoryList
-            }>
-            {CATEGORY_OPTIONS.map(category => {
-              const isActive =
-                activeCategoryKey ===
-                category.key;
-
-              return (
-                <Pressable
-                  key={category.key}
-                  accessibilityRole="button"
-                  accessibilityState={{
-                    selected: isActive,
-                  }}
-                  onPress={() =>
-                    setActiveCategoryKey(
-                      category.key,
-                    )
-                  }
-                  style={({pressed}) => [
-                    styles.categoryChip,
-                    {
-                      borderColor: isActive
-                        ? theme.colors.primary
-                        : theme.colors.border,
-
-                      backgroundColor: isActive
-                        ? theme.colors.primary
-                        : theme.colors.surface,
-
-                      opacity: pressed
-                        ? 0.78
-                        : 1,
-                    },
-                  ]}>
-                  <MdiIcon
-                    path={category.icon}
-                    size={18}
-                    color={
-                      isActive
-                        ? '#FFFFFF'
-                        : theme.colors.mutedText
-                    }
-                  />
-
-                  <Text
-                    style={[
-                      styles.categoryLabel,
-                      {
-                        color: isActive
-                          ? '#FFFFFF'
-                          : theme.colors.text,
-                      },
-                    ]}>
-                    {category.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          <StateView
-            error={error}
-            loading={isInitialLoading}
-            title="Etkinlikler yükleniyor..."
+          <IconButton
+            accessibilityLabel="Bildirimler"
+            icon={ICONS.bell}
+            onPress={() => navigation.navigate(ROUTES.NOTIFICATIONS)}
+            size={22}
           />
+        </View>
 
-          {!isInitialLoading &&
-          !error &&
-          !hasAnyContent ? (
-            <StateView
-              empty
-              title="Aramana uygun etkinlik veya topluluk bulunamadı."
-            />
-          ) : null}
+        <View style={styles.searchWrap}>
+          <AppInput
+            onChangeText={setSearchQuery}
+            rightIcon={ICONS.search}
+            placeholder="Etkinlik, topluluk veya mekan ara..."
+            returnKeyType="search"
+            value={searchQuery}
+          />
+        </View>
 
-          {!isInitialLoading &&
-          !error &&
-          hasAnyContent ? (
-            <>
-              {featuredEvents.length > 0 ? (
-                <View style={styles.section}>
-                  <SectionHeader
-                    iconPath={mdiViewGridOutline}
-                    title="Öne Çıkan Etkinlikler"
+        <CategoryFilterBar
+          activeCategoryId={activeCategoryId}
+          onChangeCategory={setActiveCategoryId}
+          theme={theme}
+        />
+
+        <StateView
+          error={error}
+          loading={loading && events.length === 0}
+          title="Etkinlikler yükleniyor..."
+        />
+
+        {!loading && !error && !hasEvents ? (
+          <StateView
+            empty
+            title="Bu kategoride etkinlik bulunamadı."
+          />
+        ) : null}
+
+        {!loading && !error && hasEvents ? (
+          <>
+            <View style={styles.section}>
+              <SectionHeader
+                actionText="Tümünü Gör"
+                marker="✦"
+                onActionPress={() => setActiveCategoryId('all')}
+                theme={theme}
+                title="Öne Çıkan Etkinlikler"
+              />
+
+              <HorizontalRail>
+                {featuredEvents.map(event => (
+                  <FeaturedEventCard
+                    event={event}
+                    key={String(event.id)}
+                    onPress={() => openEvent(event)}
                     theme={theme}
+                    width={featuredCardWidth}
                   />
+                ))}
+              </HorizontalRail>
+            </View>
 
-                  <FlatList
-                    horizontal
-                    data={featuredEvents}
-                    keyExtractor={item =>
-                      String(item.id)
-                    }
-                    renderItem={({item}) => (
-                      <FeaturedEventCard
-                        item={item}
-                        width={
-                          featuredCardWidth
-                        }
-                        theme={theme}
-                        onPress={() =>
-                          openEvent(item)
-                        }
-                      />
-                    )}
-                    ItemSeparatorComponent={() => (
-                      <View
-                        style={
-                          styles.featuredSeparator
-                        }
-                      />
-                    )}
-                    decelerationRate="fast"
-                    snapToInterval={
-                      featuredCardWidth + 12
-                    }
-                    snapToAlignment="start"
-                    showsHorizontalScrollIndicator={
-                      false
-                    }
-                    onMomentumScrollEnd={
-                      handleFeaturedScroll
-                    }
-                    contentContainerStyle={
-                      styles.featuredList
-                    }
-                  />
-
-                  {featuredEvents.length > 1 ? (
-                    <View
-                      style={styles.pagination}>
-                      {featuredEvents.map(
-                        (_, index) => (
-                          <View
-                            key={String(index)}
-                            style={[
-                              styles.paginationDot,
-                              {
-                                backgroundColor:
-                                  index ===
-                                  featuredIndex
-                                    ? theme.colors
-                                        .primary
-                                    : theme.colors
-                                        .border,
-                              },
-                              index ===
-                                featuredIndex &&
-                                styles
-                                  .paginationDotActive,
-                            ]}
-                          />
-                        ),
-                      )}
-                    </View>
-                  ) : null}
-                </View>
-              ) : null}
-
-              {activeCommunities.length > 0 ? (
-                <View style={styles.section}>
-                  <SectionHeader
-                    iconPath={mdiTrophyOutline}
-                    title="En Aktif Topluluklar"
-                    theme={theme}
-                    actionText="Tümünü Gör"
-                    onActionPress={
-                      openCommunityList
-                    }
-                  />
-
-                  <FlatList
-                    horizontal
-                    data={activeCommunities}
-                    keyExtractor={item =>
-                      String(item.id)
-                    }
-                    renderItem={({item}) => (
-                      <ActiveCommunityCard
-                        item={item}
-                        width={
-                          activeCommunityCardWidth
-                        }
-                        theme={theme}
-                        onPress={() =>
-                          openCommunity(item)
-                        }
-                      />
-                    )}
-                    ItemSeparatorComponent={() => (
-                      <View
-                        style={
-                          styles.communitySeparator
-                        }
-                      />
-                    )}
-                    showsHorizontalScrollIndicator={
-                      false
-                    }
-                    contentContainerStyle={
-                      styles.communityList
-                    }
-                  />
-                </View>
-              ) : null}
-
-              {upcomingEvents.length > 0 ? (
-                <View style={styles.section}>
-                  <SectionHeader
-                    iconPath={
-                      mdiAccountGroupOutline
-                    }
-                    title="Yaklaşan Etkinlikler"
-                    theme={theme}
-                  />
-
-                  <View style={styles.upcomingList}>
-                    {upcomingEvents.map(event => (
-                      <UpcomingEventRow
-                        key={String(event.id)}
-                        item={event}
-                        theme={theme}
-                        onPress={() =>
-                          openEvent(event)
-                        }
-                      />
-                    ))}
-                  </View>
-                </View>
-              ) : null}
-            </>
-          ) : null}
-        </ScrollView>
-
-        <View
-          style={[
-            styles.fabContainer,
-            {
-              bottom: tabBarHeight + 14,
-            },
-          ]}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Etkinlik oluştur"
-            onPress={() =>
-              navigation.navigate(
-                ROUTES.CREATE_EVENT,
-              )
-            }
-            style={styles.fabPressable}>
-            {({pressed}) => (
-              <LinearGradient
-                colors={[
-                  '#7C3AED',
-                  '#2563EB',
-                ]}
-                start={{x: 0, y: 0.5}}
-                end={{x: 1, y: 0.5}}
-                style={[
-                  styles.fabGradient,
-                  pressed && styles.fabPressed,
-                ]}>
-                <MdiIcon
-                  path={mdiPlus}
-                  size={26}
-                  color="#FFFFFF"
+            {popularCommunities.length > 0 ? (
+              <View style={styles.section}>
+                <SectionHeader
+                  actionText="Tümünü Gör"
+                  marker="●"
+                  theme={theme}
+                  title="En Aktif Topluluklar"
                 />
 
-                <Text style={styles.fabText}>
-                  Etkinlik Oluştur
-                </Text>
-              </LinearGradient>
-            )}
-          </Pressable>
-        </View>
-      </Screen>
-    </>
-  );
-}
+                <HorizontalRail>
+                  {popularCommunities.map((community, index) => (
+                    <PopularCommunityCard
+                      community={community}
+                      index={index}
+                      key={String(community.id)}
+                      onPress={() => openCommunity(community)}
+                      theme={theme}
+                      width={communityCardWidth}
+                    />
+                  ))}
+                </HorizontalRail>
+              </View>
+            ) : null}
 
-function SectionHeader({
-  iconPath,
-  title,
-  theme,
-  actionText,
-  onActionPress,
-}) {
-  return (
-    <View style={styles.sectionHeader}>
-      <View style={styles.sectionTitleRow}>
-        <View
-          style={[
-            styles.sectionIconContainer,
-            {
-              backgroundColor:
-                theme.colors.surface,
-              borderColor:
-                theme.colors.border,
-            },
-          ]}>
-          <MdiIcon
-            path={iconPath}
-            size={20}
-            color={theme.colors.primary}
-          />
-        </View>
+            {upcomingEvents.length > 0 ? (
+              <View style={styles.section}>
+                <SectionHeader
+                  actionText="Tümünü Gör"
+                  theme={theme}
+                  title="Yaklaşan Etkinlikler"
+                />
 
-        <Text
-          style={[
-            styles.sectionTitle,
-            {
-              color: theme.colors.text,
-            },
-          ]}>
-          {title}
-        </Text>
-      </View>
+                <HorizontalRail>
+                  {upcomingEvents.map(event => (
+                    <UpcomingEventCard
+                      event={event}
+                      key={String(event.id)}
+                      onPress={() => openEvent(event)}
+                      theme={theme}
+                      width={upcomingCardWidth}
+                    />
+                  ))}
+                </HorizontalRail>
+              </View>
+            ) : null}
 
-      {actionText ? (
+            <View style={styles.section}>
+              <SectionHeader
+                actionText={activeEvents.length > 0 ? 'Canlı Yayınlar' : null}
+                marker="●"
+                theme={theme}
+                title="Bugün Aktif"
+              />
+
+              {activeEvents.length > 0 ? (
+                <View style={styles.liveStack}>
+                  {activeEvents.map(event => (
+                    <LiveEventCard
+                      event={event}
+                      key={String(event.id)}
+                      onPress={() => openEvent(event)}
+                      theme={theme}
+                    />
+                  ))}
+                </View>
+              ) : (
+                <View
+                  style={[
+                    styles.activeEmpty,
+                    {
+                      backgroundColor: theme.colors.surface,
+                      borderColor: theme.colors.border,
+                    },
+                  ]}>
+                  <Text style={[styles.activeEmptyText, {color: theme.colors.mutedText}]}>
+                    Şu anda aktif etkinlik yok.
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.section}>
+              <DiscoverStatsStrip
+                nearbyEventCount={nearbyEventCount}
+                theme={theme}
+                todayEventCount={todayEventCount}
+                topCategory={topCategory}
+              />
+            </View>
+          </>
+        ) : null}
+      </ScrollView>
+
+      <View style={[styles.fabContainer, {bottom: tabBarHeight + 38}]}>
         <Pressable
-          hitSlop={10}
-          onPress={onActionPress}>
-          <Text
-            style={[
-              styles.sectionAction,
-              {
-                color: theme.colors.primary,
-              },
-            ]}>
-            {actionText}
-          </Text>
+          accessibilityRole="button"
+          onPress={() => navigation.navigate(ROUTES.CREATE_EVENT)}
+          style={styles.fabPressable}>
+          {({pressed}) => (
+            <LinearGradient
+              colors={['#2563EB', '#1D4ED8']}
+              end={{x: 1, y: 1}}
+              start={{x: 0, y: 0}}
+              style={[styles.fabGradient, pressed && styles.fabPressed]}>
+              <Text style={styles.fabPlus}>＋</Text>
+              <Text style={styles.fabText}>Senin Etkinliğin</Text>
+            </LinearGradient>
+          )}
         </Pressable>
-      ) : null}
-    </View>
+      </View>
+    </Screen>
   );
 }
 
-function createEventViewModel(event) {
-  const date = getEventDate(event);
-
-  const imageURL = event.coverURL || null;
-
-  return {
-    id: String(event.id),
-
-    raw: event,
-
-    title: getEventTitle(event),
-
-    description: event.description || '',
-
-    categoryLabel:
-      getEventCategory(event) ||
-      'Etkinlik',
-
-    location: getEventLocation(event),
-
-    participantCount:
-      getEventParticipantCount(event),
-
-    dateLabel: date
-      ? new Intl.DateTimeFormat('tr-TR', {
-          day: 'numeric',
-          month: 'long',
-          weekday: 'short',
-        }).format(date)
-      : 'Tarih belirtilmedi',
-
-    timeLabel: date
-      ? new Intl.DateTimeFormat('tr-TR', {
-          hour: '2-digit',
-          minute: '2-digit',
-        }).format(date)
-      : '--:--',
-
-    day: date
-      ? String(date.getDate()).padStart(
-          2,
-          '0',
-        )
-      : '--',
-
-    month: date
-      ? new Intl.DateTimeFormat('tr-TR', {
-          month: 'short',
-        })
-          .format(date)
-          .replace('.', '')
-          .toLocaleUpperCase('tr-TR')
-      : '',
-
-    imageSource: imageURL
-      ? {uri: imageURL}
-      : IMAGES.coverPlaceholder,
-
-    fallbackImageSource:
-      IMAGES.coverPlaceholder,
-  };
-}
-
-function getEventDate(event) {
-  return convertToDate(event.startDate);
-}
-
-function convertToDate(value) {
+function normalizeText(value) {
   if (!value) {
-    return null;
+    return '';
   }
 
-  if (typeof value.toDate === 'function') {
-    return value.toDate();
+  if (typeof value === 'object') {
+    if (typeof value.latitude === 'number' && typeof value.longitude === 'number') {
+      return `${value.latitude} ${value.longitude}`;
+    }
+
+    return '';
   }
 
-  const date = new Date(value);
-
-  return Number.isNaN(date.getTime())
-    ? null
-    : date;
-}
-
-function compareEventsByDate(
-  firstEvent,
-  secondEvent,
-) {
-  const firstDate =
-    getEventDate(firstEvent);
-
-  const secondDate =
-    getEventDate(secondEvent);
-
-  if (!firstDate && !secondDate) {
-    return 0;
-  }
-
-  if (!firstDate) {
-    return 1;
-  }
-
-  if (!secondDate) {
-    return -1;
-  }
-
-  return (
-    firstDate.getTime() -
-    secondDate.getTime()
-  );
-}
-
-function getEventTitle(event) {
-  return event.title || 'Etkinlik';
-}
-
-function getEventLocation(event) {
-  if (event.locationLabel) {
-    return event.locationLabel;
-  }
-
-  if (
-    event.location &&
-    typeof event.location === 'object'
-  ) {
-    return formatCoordinate(event.location);
-  }
-
-  return event.location || 'Kampüs';
-}
-
-function getEventCategory(event) {
-  return event.category || '';
-}
-
-function getEventCommunityName(event) {
-  return event.organizer?.displayName || '';
-}
-
-function getEventParticipantCount(event) {
-  return Number(event.attendeeCount || 0) || 0;
-}
-
-function getCommunityMemberCount(community) {
-  return Number(community.memberCount || 0) || 0;
-}
-
-function normalizeSearchText(value) {
-  return String(value || '')
+  return String(value)
     .trim()
     .toLocaleLowerCase('tr-TR');
 }
 
-function formatCoordinate(coordinate) {
-  const latitude = Number(coordinate.latitude);
-  const longitude = Number(coordinate.longitude);
-
-  if (
-    Number.isNaN(latitude) ||
-    Number.isNaN(longitude)
-  ) {
-    return 'Harita konumu';
-  }
-
-  return `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
-}
-
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingTop: 28,
     paddingHorizontal: 16,
+    paddingTop: 26,
   },
-
-  headerAction: {
-    width: 42,
-    height: 42,
-
+  header: {
+    minHeight: 98,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  headerTextBlock: {
+    minWidth: 0,
+    flex: 1,
+  },
+  brandTitle: {
+    fontSize: 31,
+    lineHeight: 38,
+    fontWeight: '900',
+  },
+  greeting: {
+    marginTop: 18,
+    fontSize: 20,
+    lineHeight: 26,
+    fontWeight: '900',
+  },
+  subtitle: {
+    marginTop: 4,
+    fontSize: 14,
+    lineHeight: 19,
+    fontWeight: '600',
+  },
+  searchWrap: {
+    marginBottom: 16,
+  },
+  section: {
+    marginTop: 28,
+  },
+  horizontalRail: {
+    gap: 12,
+    paddingRight: 16,
+  },
+  liveStack: {
+    gap: 12,
+  },
+  activeEmpty: {
+    minHeight: 86,
     alignItems: 'center',
     justifyContent: 'center',
-
-    borderWidth: 1,
-    borderRadius: 14,
-  },
-
-  searchContainer: {
-    minHeight: 58,
-
-    paddingHorizontal: 16,
-
-    flexDirection: 'row',
-    alignItems: 'center',
-
-    gap: 11,
-
+    paddingHorizontal: 18,
     borderWidth: 1,
     borderRadius: 18,
   },
-
-  searchInput: {
-    flex: 1,
-    paddingVertical: 14,
-
+  activeEmptyText: {
+    textAlign: 'center',
     fontSize: 14,
-    fontWeight: '600',
-  },
-
-  categoryList: {
-    paddingTop: 16,
-    paddingRight: 16,
-
-    gap: 10,
-  },
-
-  categoryChip: {
-    minHeight: 46,
-
-    paddingHorizontal: 15,
-
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-
-    gap: 7,
-
-    borderWidth: 1,
-    borderRadius: 23,
-  },
-
-  categoryLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-
-  section: {
-    marginTop: 26,
-  },
-
-  sectionHeader: {
-    marginBottom: 13,
-
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-
-  sectionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 9,
-  },
-
-  sectionIconContainer: {
-    width: 34,
-    height: 34,
-
-    alignItems: 'center',
-    justifyContent: 'center',
-
-    borderWidth: 1,
-    borderRadius: 11,
-  },
-
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '900',
-  },
-
-  sectionAction: {
-    fontSize: 12,
+    lineHeight: 20,
     fontWeight: '800',
   },
-
-  featuredList: {
-    paddingRight: 16,
-  },
-
-  featuredSeparator: {
-    width: 12,
-  },
-
-  pagination: {
-    marginTop: 13,
-
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-
-    gap: 7,
-  },
-
-  paginationDot: {
-    width: 7,
-    height: 7,
-
-    borderRadius: 4,
-  },
-
-  paginationDotActive: {
-    width: 20,
-  },
-
-  communityList: {
-    paddingRight: 16,
-  },
-
-  communitySeparator: {
-    width: 12,
-  },
-
-  upcomingList: {
-    gap: 11,
-  },
-
   fabContainer: {
     position: 'absolute',
     right: 18,
-
-    borderRadius: 18,
-
+    borderRadius: 28,
     shadowColor: '#2563EB',
-    shadowOffset: {
-      width: 0,
-      height: 7,
-    },
-    shadowOpacity: 0.34,
-    shadowRadius: 12,
-
-    elevation: 12,
+    shadowOffset: {width: 0, height: 10},
+    shadowOpacity: 0.32,
+    shadowRadius: 16,
+    elevation: 10,
   },
-
   fabPressable: {
     overflow: 'hidden',
-    borderRadius: 18,
+    borderRadius: 28,
   },
-
   fabGradient: {
-    height: 56,
-
-    paddingHorizontal: 20,
-
+    minHeight: 58,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-
-    gap: 8,
-
-    borderRadius: 18,
+    gap: 10,
+    paddingHorizontal: 18,
+    borderRadius: 28,
   },
-
   fabPressed: {
-    opacity: 0.86,
-    transform: [
-      {
-        scale: 0.97,
-      },
-    ],
+    opacity: 0.88,
+    transform: [{scale: 0.98}],
   },
-
+  fabPlus: {
+    width: 40,
+    height: 40,
+    overflow: 'hidden',
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    color: '#2563EB',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    fontSize: 25,
+    lineHeight: 40,
+    fontWeight: '700',
+  },
   fabText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '900',
   },
 });
