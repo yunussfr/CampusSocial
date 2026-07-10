@@ -14,8 +14,8 @@ import {
   getCommunityImageSource,
   getCommunityMemberAvatars,
   getCommunityName,
-  getCommunityPrivacyLabel,
 } from '../../utils/communityFormatters';
+import {isCommunityPrivate} from '../../utils/communityAccess';
 
 export const CommunityListCard = React.memo(function CommunityListCard({
   community,
@@ -27,7 +27,7 @@ export const CommunityListCard = React.memo(function CommunityListCard({
 }) {
   const category = getCommunityCategory(community);
   const avatars = getCommunityMemberAvatars(community);
-  const privateCommunity = getCommunityPrivacyLabel(community) === 'Ozel';
+  const privateCommunity = isCommunityPrivate(community);
   const buttonLabel = privateCommunity ? 'İncele' : isMember ? 'Ayrıl' : 'Katıl';
 
   return (

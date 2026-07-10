@@ -9,6 +9,43 @@ function mapDoc(doc) {
   };
 }
 
+function buildRelatedListingSnapshot(listing) {
+  if (!listing?.id) {
+    return null;
+  }
+
+  const imageURLs = Array.isArray(listing.imageURLs)
+    ? listing.imageURLs.filter(Boolean)
+    : [];
+  const fallbackImage =
+    imageURLs[0] ||
+    listing.images?.[0] ||
+    listing.imageURL ||
+    listing.imageUrl ||
+    listing.thumbnailURL ||
+    '';
+
+  return {
+    id: listing.id,
+    title: listing.title || '',
+    description: listing.description || '',
+    category: listing.category || '',
+    categoryLabel: listing.categoryLabel || '',
+    condition: listing.condition || '',
+    conditionLabel: listing.conditionLabel || '',
+    status: listing.status || 'active',
+    price: listing.price ?? null,
+    currency: listing.currency || 'TRY',
+    isFree: listing.isFree === true,
+    imageURL: fallbackImage,
+    imageURLs: imageURLs.length > 0 ? imageURLs : fallbackImage ? [fallbackImage] : [],
+    location: listing.location || '',
+    campusName: listing.campusName || '',
+    sellerId: listing.sellerId || listing.seller?.uid || '',
+    seller: listing.seller || null,
+  };
+}
+
 export function subscribeToChats({ userId, onData, onError }) {
   return firestoreDb
     .collection(COLLECTIONS.CHATS)
@@ -81,6 +118,7 @@ export function subscribeToMessages({ chatId, onData, onError }) {
 export async function createOrGetDirectChat({
   currentUser,
   otherUser,
+  relatedListing,
   relatedListingId,
 }) {
   const participantIds = [currentUser.uid, otherUser.uid].sort();
@@ -105,6 +143,7 @@ export async function createOrGetDirectChat({
         },
       },
       relatedListingId: relatedListingId || null,
+      relatedListing: buildRelatedListingSnapshot(relatedListing),
       updatedAt: firestore.FieldValue.serverTimestamp(),
     },
     { merge: true },

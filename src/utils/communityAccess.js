@@ -1,7 +1,19 @@
 import {getCommunityMemberIds} from './communityFormatters';
 
 export function isCommunityPrivate(community) {
-  return community?.isPrivate === true || community?.privacy === 'private';
+  if (!community) {
+    return false;
+  }
+
+  if (community.privacy === 'private') {
+    return true;
+  }
+
+  if (community.privacy === 'public') {
+    return false;
+  }
+
+  return community.isPrivate === true;
 }
 
 export function isCommunityMember(community, user, joinedCommunityIds = []) {
@@ -45,7 +57,7 @@ export function getCommunityAccessMessage(community, isMember) {
       tone: 'locked',
       title: 'Bu özel bir topluluktur',
       description:
-        'Gönderileri görmek ve paylaşım yapmak için topluluğa katıl.',
+        'Gönderileri görmek ve paylaşım yapmak için katılım isteği göndermelisin.',
     };
   }
 
