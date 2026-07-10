@@ -36,6 +36,7 @@ export async function createCommunity(input, creator) {
     category: input.category.trim(),
     memberCount: 0,
     isPrivate: Boolean(input.isPrivate),
+    privacy: input.privacy || (input.isPrivate ? 'private' : 'public'),
     tags: input.tags || [],
     rules: input.rules || [],
     createdAt: now,
@@ -59,6 +60,20 @@ export async function updateCommunityMedia(communityId, media) {
 }
 
 export async function joinCommunity(communityId, userId) {
+  const communitySnapshot = await firestoreDb
+    .collection(COLLECTIONS.COMMUNITIES)
+    .doc(communityId)
+    .get();
+
+  const community = communitySnapshot.data();
+
+  if (
+    community?.creatorId !== userId &&
+    (community?.isPrivate === true || community?.privacy === 'private')
+  ) {
+    throw new Error('Kapalı topluluklar için katılım isteği gerekir.');
+  }
+
   return firestoreDb
     .collection(COLLECTIONS.COMMUNITIES)
     .doc(communityId)

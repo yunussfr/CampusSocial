@@ -9,9 +9,11 @@ import {
 
 import {IMAGES} from '../../constants/assets';
 import {useTheme} from '../../context/ThemeContext';
+import {isCommunityPrivate} from '../../utils/communityAccess';
 
 export function CommunityCard({community, onPress}) {
   const {theme} = useTheme();
+  const privateCommunity = isCommunityPrivate(community);
 
   const communityLogo =
     community.logoURL || community.coverURL
@@ -46,7 +48,7 @@ export function CommunityCard({community, onPress}) {
             {community.name}
           </Text>
 
-          {community.isPrivate ? (
+          {privateCommunity ? (
             <View
               style={[
                 styles.badge,

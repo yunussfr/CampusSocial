@@ -222,7 +222,21 @@ service cloud.firestore {
 
       match /members/{userId} {
         allow read: if signedIn();
-        allow create, delete: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && (
+            get(
+              /databases/$(database)/documents/communities/$(communityId)
+            ).data.creatorId == request.auth.uid ||
+            (
+              get(
+                /databases/$(database)/documents/communities/$(communityId)
+              ).data.isPrivate != true &&
+              get(
+                /databases/$(database)/documents/communities/$(communityId)
+              ).data.privacy != 'private'
+            )
+          );
+        allow delete: if isOwner(userId);
         allow update: if false;
       }
 

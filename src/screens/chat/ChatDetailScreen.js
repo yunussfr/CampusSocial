@@ -9,14 +9,18 @@ import {
   Text,
   View,
 } from 'react-native';
+import {Feather} from '@react-native-vector-icons/feather';
+import {mdiChevronRight, mdiShoppingOutline} from '@mdi/js';
 import {useHeaderHeight} from '@react-navigation/elements';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {AppInput} from '../../components/ui/DesignSystem';
-import {ICONS} from '../../constants/assets';
+import {MdiIcon} from '../../components/ui/MdiIcon';
 import {ROUTES} from '../../constants/routes';
 import {useAuth} from '../../context/AuthContext';
 import {useChats} from '../../context/ChatContext';
+import {useMarket} from '../../context/MarketContext';
 import {useTheme} from '../../context/ThemeContext';
+import {formatListingPrice} from '../../utils/marketFormatters';
 
 function formatMessageTime(value) {
   const date = value?.toDate ? value.toDate() : value ? new Date(value) : null;
@@ -47,6 +51,7 @@ export function ChatDetailScreen({navigation, route}) {
     startActiveChatListener,
     startMessagesListener,
   } = useChats();
+  const {selectListing} = useMarket();
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
   const [text, setText] = useState('');
@@ -87,6 +92,7 @@ export function ChatDetailScreen({navigation, route}) {
     ? activeChat?.participantProfiles?.[otherParticipantId]
     : null;
   const otherDisplayName = otherProfile?.displayName || 'Kullanıcı';
+  const relatedListing = activeChat?.relatedListing;
 
   function handleProfilePress() {
     if (!otherParticipantId) {
@@ -96,6 +102,18 @@ export function ChatDetailScreen({navigation, route}) {
     navigation.navigate('ProfileTab', {
       screen: ROUTES.USER_PROFILE,
       params: {userId: otherParticipantId},
+    });
+  }
+
+  function openRelatedListing() {
+    if (!relatedListing?.id) {
+      return;
+    }
+
+    selectListing?.(relatedListing);
+    navigation.navigate('MarketTab', {
+      screen: ROUTES.LISTING_DETAIL,
+      params: {listingId: relatedListing.id},
     });
   }
 
@@ -157,11 +175,6 @@ export function ChatDetailScreen({navigation, route}) {
             Mesajlaşıyorsunuz
           </Text>
         </View>
-
-        <Image
-          source={ICONS.tabProfile}
-          style={[styles.profileIcon, {tintColor: theme.colors.primary}]}
-        />
       </Pressable>
 
       {error ? (
@@ -178,6 +191,63 @@ export function ChatDetailScreen({navigation, route}) {
         data={messages}
         keyboardShouldPersistTaps="handled"
         keyExtractor={item => item.id}
+        ListHeaderComponent={
+          relatedListing?.id ? (
+            <Pressable
+              onPress={openRelatedListing}
+              style={[
+                styles.listingCard,
+                {
+                  backgroundColor: theme.colors.surface,
+                  borderColor: theme.colors.border,
+                  shadowColor: theme.colors.shadow,
+                },
+              ]}>
+              {relatedListing.imageURL ? (
+                <Image
+                  source={{uri: relatedListing.imageURL}}
+                  style={styles.listingImage}
+                />
+              ) : (
+                <View
+                  style={[
+                    styles.listingImageFallback,
+                    {backgroundColor: theme.colors.primarySoft},
+                  ]}>
+                  <MdiIcon
+                    path={mdiShoppingOutline}
+                    size={24}
+                    color={theme.colors.primary}
+                  />
+                </View>
+              )}
+
+              <View style={styles.listingTextBlock}>
+                <Text
+                  numberOfLines={1}
+                  style={[styles.listingEyebrow, {color: theme.colors.primary}]}>
+                  Market ilanı
+                </Text>
+                <Text
+                  numberOfLines={1}
+                  style={[styles.listingTitle, {color: theme.colors.text}]}>
+                  {relatedListing.title || 'İlan detayı'}
+                </Text>
+                <Text
+                  numberOfLines={1}
+                  style={[styles.listingPrice, {color: theme.colors.mutedText}]}>
+                  {formatListingPrice(relatedListing)}
+                </Text>
+              </View>
+
+              <MdiIcon
+                path={mdiChevronRight}
+                size={22}
+                color={theme.colors.subtleText}
+              />
+            </Pressable>
+          ) : null
+        }
         ListEmptyComponent={
           <View
             style={[
@@ -268,7 +338,7 @@ export function ChatDetailScreen({navigation, route}) {
           {sending ? (
             <Text style={styles.sendButtonText}>...</Text>
           ) : (
-            <Image source={ICONS.send} style={styles.sendIcon} />
+            <Feather name="send" size={22} color="#FFFFFF" />
           )}
         </Pressable>
       </View>
@@ -320,16 +390,58 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginTop: 1,
   },
-  profileIcon: {
-    width: 22,
-    height: 22,
-    resizeMode: 'contain',
-  },
   listContent: {
     gap: 10,
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 24,
+  },
+  listingCard: {
+    minHeight: 78,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderRadius: 16,
+    shadowOpacity: 0.06,
+    shadowOffset: {width: 0, height: 5},
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  listingImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: '#E2E8F0',
+  },
+  listingImageFallback: {
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+  },
+  listingTextBlock: {
+    minWidth: 0,
+    flex: 1,
+  },
+  listingEyebrow: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '800',
+  },
+  listingTitle: {
+    marginTop: 1,
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: '800',
+  },
+  listingPrice: {
+    marginTop: 2,
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '700',
   },
   emptyListContent: {
     flexGrow: 1,
@@ -410,12 +522,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
-  },
-  sendIcon: {
-    width: 22,
-    height: 22,
-    resizeMode: 'contain',
-    tintColor: '#FFFFFF',
   },
   errorText: {
     fontSize: 14,

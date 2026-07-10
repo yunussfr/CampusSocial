@@ -195,6 +195,7 @@ export function ListingDetailScreen({navigation}) {
           photoURL: profile?.photoURL || user.photoURL || '',
         },
         otherUser: listing.seller,
+        relatedListing: listing,
         relatedListingId: listing.id,
       });
 

@@ -11,6 +11,7 @@ import {
   normalizeTurkishText,
   parseMemberCount,
 } from './communityFormatters';
+import {isCommunityPrivate} from './communityAccess';
 
 export function communityMatchesCategory(community, categoryKey) {
   if (!categoryKey || categoryKey === 'all') {
@@ -84,7 +85,7 @@ export function communityIsJoined(community, userId, joinedCommunityIds = []) {
 }
 
 export function communityMatchesJoinStatus(community, filters, userId, joinedCommunityIds) {
-  if (filters.joinOpenOnly && community?.isPrivate === true) {
+  if (filters.joinOpenOnly && isCommunityPrivate(community)) {
     return false;
   }
 

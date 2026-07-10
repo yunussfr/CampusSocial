@@ -46,7 +46,7 @@ export function CreateCommunityScreen({navigation}) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
-  const [isPrivate, setIsPrivate] = useState(false);
+  const [isPublic, setIsPublic] = useState(false);
   const [coverAsset, setCoverAsset] = useState(null);
   const [iconAsset, setIconAsset] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -112,7 +112,8 @@ export function CreateCommunityScreen({navigation}) {
           name,
           description,
           category: selectedCategory.firestoreValue,
-          isPrivate,
+          isPrivate: !isPublic,
+          privacy: isPublic ? 'public' : 'private',
           tags: [selectedCategory.firestoreValue.trim().toLowerCase()],
           rules: [],
         },
@@ -288,26 +289,26 @@ export function CreateCommunityScreen({navigation}) {
           <View style={[styles.card, styles.privacyCard, {backgroundColor: theme.colors.surface}]}>
             <View style={styles.privacyIcon}>
               <MdiIcon
-                path={isPrivate ? mdiLockOutline : mdiWeb}
+                path={isPublic ? mdiWeb : mdiLockOutline}
                 size={28}
                 color={theme.colors.primary}
               />
             </View>
             <View style={styles.privacyTextBlock}>
               <Text style={[styles.privacyTitle, {color: theme.colors.text}]}>
-                {isPrivate ? 'Özel Topluluk' : 'Açık Topluluk'}
+                {isPublic ? 'Açık Topluluk' : 'Özel Topluluk'}
               </Text>
               <Text style={[styles.privacyDescription, {color: theme.colors.mutedText}]}>
-                {isPrivate
-                  ? 'Sadece katılan üyeler gönderileri görebilir ve paylaşım yapabilir.'
-                  : 'Gönderiler herkese açık görünür.'}
+                {isPublic
+                  ? 'Kullanıcılar doğrudan katılabilir.'
+                  : 'Katılım isteği gerekir. Gönderileri sadece üyeler görebilir.'}
               </Text>
             </View>
             <Switch
-              onValueChange={setIsPrivate}
+              onValueChange={setIsPublic}
               thumbColor="#FFFFFF"
               trackColor={{false: '#CBD5E1', true: theme.colors.primary}}
-              value={isPrivate}
+              value={isPublic}
             />
           </View>
 

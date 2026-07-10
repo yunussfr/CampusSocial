@@ -59,7 +59,6 @@ function Cover({community}) {
       />
     );
   }
-
   return (
     <LinearGradient
       colors={[category?.color || '#2563EB', '#0F4FD8', '#FF8A1F']}
@@ -106,6 +105,15 @@ export function CommunityHeroHeader({
         : hasRejectedRequest
           ? 'İstek reddedildi'
           : 'Topluluğa Katıl';
+
+  const actionLabel =
+    privateCommunity &&
+    !isMember &&
+    !membershipSubmitting &&
+    !hasPendingRequest &&
+    !hasRejectedRequest
+      ? 'Katılım isteği gönder'
+      : membershipLabel;
 
   return (
     <View style={styles.root}>
@@ -206,7 +214,7 @@ export function CommunityHeroHeader({
               size={20}
               color="#FFFFFF"
             />
-            <Text style={styles.mainActionText}>{membershipLabel}</Text>
+            <Text style={styles.mainActionText}>{actionLabel}</Text>
             {isMember ? <MdiIcon path={mdiChevronDown} size={18} color="#FFFFFF" /> : null}
           </Pressable>
 

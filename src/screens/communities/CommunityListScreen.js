@@ -46,6 +46,7 @@ import {
   communityIsJoined,
 } from '../../utils/communityFilters';
 import {parseMemberCount} from '../../utils/communityFormatters';
+import {isCommunityPrivate} from '../../utils/communityAccess';
 
 function cloneFilters(filters) {
   return {
@@ -232,7 +233,7 @@ export function CommunityListScreen({navigation}) {
       return;
     }
 
-    if (community?.isPrivate) {
+    if (isCommunityPrivate(community)) {
       openCommunity(community);
       return;
     }

@@ -172,7 +172,15 @@ export function getCommunityJoinStatus(community, userId) {
 }
 
 export function getCommunityPrivacyLabel(community) {
-  if (community?.isPrivate || community?.privacy === 'private') {
+  if (community?.privacy === 'private') {
+    return 'Ozel';
+  }
+
+  if (community?.privacy === 'public') {
+    return 'Acik';
+  }
+
+  if (community?.isPrivate === true) {
     return 'Ozel';
   }
 
