@@ -8,6 +8,8 @@ import {
   TextInput,
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
+import {mdiArrowLeft} from '@mdi/js';
+import {MdiIcon} from '../../components/ui/MdiIcon';
 import { useAuth } from '../../context/AuthContext';
 import { uploadUserAvatar } from '../../services/storageService';
 
@@ -77,7 +79,13 @@ export function EditProfileScreen({ navigation }) {
     <ScrollView
       contentContainerStyle={styles.container}
       keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>Profili Duzenle</Text>
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => navigation.goBack()}
+        style={styles.backButton}>
+        <MdiIcon path={mdiArrowLeft} size={24} color="#0B1C30" />
+      </Pressable>
+      <Text style={styles.title}>Profili Düzenle</Text>
       <TextInput
         autoCorrect={false}
         onChangeText={setDisplayName}
@@ -120,7 +128,7 @@ export function EditProfileScreen({ navigation }) {
       />
       <Pressable onPress={handlePickAvatar} style={styles.secondaryButton}>
         <Text style={styles.secondaryButtonText}>
-          {avatarAsset ? 'Avatar degistir' : 'Avatar sec'}
+          {avatarAsset ? 'Avatar değiştir' : 'Avatar seç'}
         </Text>
       </Pressable>
       {avatarAsset?.uri ? (
@@ -144,6 +152,14 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 24,
     backgroundColor: '#F8FAFC',
+  },
+  backButton: {
+    width: 42,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 21,
+    backgroundColor: '#FFFFFF',
   },
   title: {
     color: '#0B1C30',

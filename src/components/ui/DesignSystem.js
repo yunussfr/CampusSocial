@@ -197,13 +197,19 @@ export function AppInput({
         )
       ) : null}
       {rightIcon ? (
-        <Image
-          source={rightIcon}
-          style={[
-            styles.inputIconRight,
-            rightIconTintColor ? { tintColor: rightIconTintColor } : undefined,
-          ]}
-        />
+        React.isValidElement(rightIcon) ? (
+          <View style={styles.inputIconRightWrap}>
+            {rightIcon}
+          </View>
+        ) : (
+          <Image
+            source={rightIcon}
+            style={[
+              styles.inputIconRight,
+              rightIconTintColor ? { tintColor: rightIconTintColor } : undefined,
+            ]}
+          />
+        )
       ) : null}
       <TextInput
         {...props}
@@ -481,6 +487,16 @@ screenContent: {
   },
   inputWithRightIcon: {
     paddingRight: 48,
+  },
+  inputIconRightWrap: {
+    position: 'absolute',
+    right: 16,
+    top: 14,
+    zIndex: 1,
+    width: 22,
+    height: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   multilineInput: {
     minHeight: 112,

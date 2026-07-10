@@ -15,6 +15,7 @@ import {
   mdiAccountPlusOutline,
   mdiChevronRight,
   mdiEmailOutline,
+  mdiEyeOutline,
   mdiEyeOffOutline,
   mdiLockOutline,
 } from '@mdi/js';
@@ -38,6 +39,7 @@ export function LoginScreen({navigation}) {
   const {error, login} = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit() {
@@ -85,8 +87,9 @@ export function LoginScreen({navigation}) {
             icon={mdiLockOutline}
             onChangeText={setPassword}
             placeholder="Şifreniz"
-            rightIcon={mdiEyeOffOutline}
-            secureTextEntry
+            onRightIconPress={() => setPasswordVisible(current => !current)}
+            rightIcon={passwordVisible ? mdiEyeOutline : mdiEyeOffOutline}
+            secureTextEntry={!passwordVisible}
             spellCheck={false}
             textContentType="password"
             value={password}
@@ -149,7 +152,7 @@ function BrandMark({size = 'default'}) {
   );
 }
 
-function AuthInput({icon, rightIcon, style, ...props}) {
+function AuthInput({icon, onRightIconPress, rightIcon, style, ...props}) {
   return (
     <View style={[styles.inputShell, style]}>
       <MdiIcon path={icon} size={27} color={COLORS.primary} />
@@ -158,7 +161,15 @@ function AuthInput({icon, rightIcon, style, ...props}) {
         placeholderTextColor={COLORS.placeholder}
         style={styles.input}
       />
-      {rightIcon ? <MdiIcon path={rightIcon} size={27} color={COLORS.placeholder} /> : null}
+      {rightIcon ? (
+        <Pressable
+          accessibilityRole="button"
+          hitSlop={10}
+          onPress={onRightIconPress}
+          style={styles.rightIconButton}>
+          <MdiIcon path={rightIcon} size={27} color={COLORS.placeholder} />
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -339,6 +350,12 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontSize: 17,
     fontWeight: '600',
+  },
+  rightIconButton: {
+    width: 34,
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   primaryButton: {
     marginTop: 4,

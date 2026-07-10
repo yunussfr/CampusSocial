@@ -1,6 +1,7 @@
 import React from 'react';
 import { Image, Pressable, StyleSheet } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
+import {MdiIcon} from './MdiIcon';
 
 export function IconButton({
   accessibilityLabel,
@@ -8,6 +9,7 @@ export function IconButton({
   onPress,
   size = 24,
   style,
+  tintColor,
 }) {
   const { theme } = useTheme();
 
@@ -24,16 +26,27 @@ export function IconButton({
         },
         style,
       ]}>
-      <Image
-        source={icon}
-        style={[
-          styles.icon,
-          {
-            height: size,
-            width: size,
-          },
-        ]}
-      />
+      {typeof icon === 'string' ? (
+        <MdiIcon
+          path={icon}
+          size={size}
+          color={tintColor || theme.colors.primary}
+        />
+      ) : React.isValidElement(icon) ? (
+        icon
+      ) : (
+        <Image
+          source={icon}
+          style={[
+            styles.icon,
+            {
+              height: size,
+              width: size,
+            },
+            tintColor ? {tintColor} : undefined,
+          ]}
+        />
+      )}
     </Pressable>
   );
 }

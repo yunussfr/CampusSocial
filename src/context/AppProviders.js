@@ -1,4 +1,5 @@
 import React from 'react';
+import { AnalyticsProvider } from './AnalyticsContext';
 import { AuthProvider } from './AuthContext';
 import { ChatProvider } from './ChatContext';
 import { CommunityProvider } from './CommunityContext';
@@ -11,15 +12,17 @@ export function AppProviders({ children }) {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <EventProvider>
-          <CommunityProvider>
-            <MarketProvider>
-              <SavedProvider>
-                <ChatProvider>{children}</ChatProvider>
-              </SavedProvider>
-            </MarketProvider>
-          </CommunityProvider>
-        </EventProvider>
+        <AnalyticsProvider>
+          <EventProvider>
+            <CommunityProvider>
+              <MarketProvider>
+                <SavedProvider>
+                  <ChatProvider>{children}</ChatProvider>
+                </SavedProvider>
+              </MarketProvider>
+            </CommunityProvider>
+          </EventProvider>
+        </AnalyticsProvider>
       </AuthProvider>
     </ThemeProvider>
   );

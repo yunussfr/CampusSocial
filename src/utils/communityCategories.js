@@ -15,7 +15,7 @@ import {
 export const COMMUNITY_CATEGORIES = [
   {
     key: 'academic',
-    label: 'Akademik ve Bolum',
+    label: 'Akademik ve Bölüm',
     shortLabel: 'Akademik',
     firestoreValue: 'Akademik ve Bolum',
     aliases: ['Akademik ve Bolum', 'Akademik ve Bolüm', 'Akademik ve Bölüm'],
@@ -24,7 +24,7 @@ export const COMMUNITY_CATEGORIES = [
   },
   {
     key: 'technology',
-    label: 'Teknoloji ve Yazilim',
+    label: 'Teknoloji ve Yazılım',
     shortLabel: 'Teknoloji',
     firestoreValue: 'Teknoloji ve Yazilim',
     aliases: ['Teknoloji ve Yazilim', 'Teknoloji ve Yazılım', 'Yazilim', 'Yazılım'],
@@ -33,7 +33,7 @@ export const COMMUNITY_CATEGORIES = [
   },
   {
     key: 'career',
-    label: 'Kariyer ve Girisimcilik',
+    label: 'Kariyer ve Girişimcilik',
     shortLabel: 'Kariyer',
     firestoreValue: 'Kariyer ve Girisimcilik',
     aliases: ['Kariyer ve Girisimcilik', 'Kariyer ve Girişimcilik', 'Kariyer'],
@@ -42,8 +42,8 @@ export const COMMUNITY_CATEGORIES = [
   },
   {
     key: 'culture',
-    label: 'Kultur ve Sanat',
-    shortLabel: 'Kultur',
+    label: 'Kültür ve Sanat',
+    shortLabel: 'Kültür',
     firestoreValue: 'Kultur ve Sanat',
     aliases: ['Kultur ve Sanat', 'Kültür ve Sanat', 'Sanat'],
     icon: mdiPaletteOutline,
@@ -69,8 +69,8 @@ export const COMMUNITY_CATEGORIES = [
   },
   {
     key: 'volunteer',
-    label: 'Gonulluluk',
-    shortLabel: 'Gonullu',
+    label: 'Gönüllülük',
+    shortLabel: 'Gönüllü',
     firestoreValue: 'Gonulluluk',
     aliases: ['Gonulluluk', 'Gönüllülük'],
     icon: mdiHeartHandshakeOutline,
@@ -78,7 +78,7 @@ export const COMMUNITY_CATEGORIES = [
   },
   {
     key: 'language',
-    label: 'Dil ve Uluslararasi',
+    label: 'Dil ve Uluslararası',
     shortLabel: 'Dil',
     firestoreValue: 'Dil ve Uluslararasi',
     aliases: ['Dil ve Uluslararasi', 'Dil ve Uluslararası'],
@@ -87,7 +87,7 @@ export const COMMUNITY_CATEGORIES = [
   },
   {
     key: 'science',
-    label: 'Bilim ve Arastirma',
+    label: 'Bilim ve Araştırma',
     shortLabel: 'Bilim',
     firestoreValue: 'Bilim ve Arastirma',
     aliases: ['Bilim ve Arastirma', 'Bilim ve Araştırma'],
@@ -96,7 +96,7 @@ export const COMMUNITY_CATEGORIES = [
   },
   {
     key: 'media',
-    label: 'Medya ve Iletisim',
+    label: 'Medya ve İletişim',
     shortLabel: 'Medya',
     firestoreValue: 'Medya ve Iletisim',
     aliases: ['Medya ve Iletisim', 'Medya ve İletişim'],
@@ -114,8 +114,8 @@ export const COMMUNITY_CATEGORIES = [
   },
   {
     key: 'other',
-    label: 'Diger',
-    shortLabel: 'Diger',
+    label: 'Diğer',
+    shortLabel: 'Diğer',
     firestoreValue: 'Diger',
     aliases: ['Diger', 'Diğer', 'Other'],
     icon: mdiViewGridOutline,
@@ -135,7 +135,7 @@ export const QUICK_COMMUNITY_CATEGORY_KEYS = [
 
 export const COMMUNITY_SORT_OPTIONS = [
   {key: 'active', label: 'En Aktif'},
-  {key: 'members', label: 'Uye Sayisina Gore'},
+  {key: 'members', label: 'Üye Sayısına Göre'},
   {key: 'newest', label: 'Yeni Topluluklar'},
   {key: 'alphabetical', label: 'Alfabetik'},
 ];

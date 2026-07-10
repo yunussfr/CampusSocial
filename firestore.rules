@@ -19,7 +19,7 @@ service cloud.firestore {
         'viewCount',
         'savedCount',
         'followersCount',
-        'followingCount',
+        'followingCount'
       ]);
     }
 
@@ -29,17 +29,113 @@ service cloud.firestore {
       allow update: if isOwner(userId) && unchangedCounterFields();
       allow delete: if false;
 
-      match /follows/{targetId} {
+      /*
+       * Yeni takip isteği modeli:
+       * users/{targetUserId}/followRequests/{requesterId}
+       */
+      match /followRequests/{requesterId} {
+        allow read: if signedIn()
+          && (
+            request.auth.uid == requesterId ||
+            request.auth.uid == userId
+          );
+
+        allow create: if signedIn()
+          && request.auth.uid == requesterId
+          && requesterId != userId
+          && request.resource.data.requesterId == requesterId
+          && request.resource.data.targetId == userId
+          && request.resource.data.status == 'pending';
+
+        allow update: if isOwner(userId)
+          && resource.data.status == 'pending'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status',
+            'respondedAt',
+            'updatedAt'
+          ])
+          && request.resource.data.status in ['accepted', 'rejected'];
+
+        allow delete: if signedIn()
+          && (
+            request.auth.uid == requesterId ||
+            request.auth.uid == userId
+          );
+      }
+
+      /*
+       * Kabul edilmiş takipçiler:
+       * users/{profileOwnerId}/followers/{followerId}
+       */
+      match /followers/{followerId} {
         allow read: if signedIn();
-        allow create, delete: if isOwner(userId) && targetId != userId;
+
+        // Profil sahibi isteği kabul ettiğinde kendi followers kaydını oluşturur.
+        allow create: if isOwner(userId);
+
+        // Takipçi kendi takibini bırakabilir veya profil sahibi takipçiyi kaldırabilir.
+        allow delete: if signedIn()
+          && (
+            request.auth.uid == followerId ||
+            request.auth.uid == userId
+          );
+
         allow update: if false;
       }
 
-      match /notifications/{notifId} {
+      /*
+       * Kabul edilmiş takip edilenler:
+       * users/{followerId}/following/{targetId}
+       */
+      match /following/{targetId} {
+        allow read: if signedIn();
+
+        /*
+         * Kullanıcı kendi following kaydını oluşturabilir.
+         * Ayrıca hedef kullanıcı, kendisine gönderilmiş isteği kabul ederken
+         * requester kullanıcının following kaydını oluşturabilir.
+         */
+        allow create: if signedIn()
+          && (
+            request.auth.uid == userId ||
+            (
+              request.auth.uid == targetId &&
+              exists(
+                /databases/$(database)/documents/users/$(targetId)/followRequests/$(userId)
+              )
+            )
+          );
+
+        // Takip eden kullanıcı takibi bırakabilir.
+        allow delete: if isOwner(userId);
+
+        allow update: if false;
+      }
+
+      /*
+       * Bildirimler:
+       * users/{receiverId}/notifications/{notificationId}
+       */
+      match /notifications/{notificationId} {
         allow read: if isOwner(userId);
-        allow create, delete: if false;
+
+        allow create: if signedIn()
+          && request.auth.uid != userId
+          && request.resource.data.senderId == request.auth.uid
+          && request.resource.data.receiverId == userId
+          && request.resource.data.type in [
+            'follow_request',
+            'follow_request_accepted'
+          ];
+
         allow update: if isOwner(userId)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'read',
+            'status',
+            'updatedAt'
+          ]);
+
+        allow delete: if isOwner(userId);
       }
 
       match /savedEvents/{eventId} {
@@ -56,44 +152,73 @@ service cloud.firestore {
         allow read, create, delete: if isOwner(userId);
         allow update: if false;
       }
+
+      /*
+       * Eski veri modeline geçici okuma desteği:
+       * users/{userId}/follows/{targetId}
+       *
+       * Yeni doğrudan takip kaydı oluşturulmasına izin verilmez.
+       */
+      match /follows/{targetId} {
+        allow read: if signedIn();
+        allow create, update, delete: if false;
+      }
     }
 
     match /events/{eventId} {
       allow read: if signedIn() && resource.data.status == 'active';
+
       allow create: if signedIn()
         && request.resource.data.organizerId == request.auth.uid
         && request.resource.data.attendeeCount == 0
         && request.resource.data.likeCount == 0
         && request.resource.data.status == 'active';
+
       allow update: if signedIn()
         && resource.data.organizerId == request.auth.uid
         && unchangedCounterFields();
-      allow delete: if signedIn() && resource.data.organizerId == request.auth.uid;
+
+      allow delete: if signedIn()
+        && resource.data.organizerId == request.auth.uid;
 
       match /attendees/{userId} {
         allow read: if signedIn();
+
         allow create: if isOwner(userId)
-          && request.resource.data.keys().hasOnly(['userId', 'joinedAt', 'status'])
+          && request.resource.data.keys().hasOnly([
+            'userId',
+            'joinedAt',
+            'status'
+          ])
           && request.resource.data.status in ['confirmed', 'waitlist'];
+
         allow delete: if isOwner(userId);
         allow update: if false;
       }
 
       match /comments/{commentId} {
         allow read: if signedIn();
-        allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
-        allow update, delete: if signedIn() && resource.data.userId == request.auth.uid;
+
+        allow create: if signedIn()
+          && request.resource.data.userId == request.auth.uid;
+
+        allow update, delete: if signedIn()
+          && resource.data.userId == request.auth.uid;
       }
     }
 
     match /communities/{communityId} {
       allow read: if signedIn();
+
       allow create: if signedIn()
         && request.resource.data.creatorId == request.auth.uid;
+
       allow update: if signedIn()
         && resource.data.creatorId == request.auth.uid
         && unchangedCounterFields();
-      allow delete: if signedIn() && resource.data.creatorId == request.auth.uid;
+
+      allow delete: if signedIn()
+        && resource.data.creatorId == request.auth.uid;
 
       match /members/{userId} {
         allow read: if signedIn();
@@ -101,53 +226,148 @@ service cloud.firestore {
         allow update: if false;
       }
 
+      match /joinRequests/{userId} {
+        allow read: if signedIn()
+          && (
+            isOwner(userId) ||
+            get(
+              /databases/$(database)/documents/communities/$(communityId)
+            ).data.creatorId == request.auth.uid
+          );
+
+        allow create: if isOwner(userId)
+          && get(
+            /databases/$(database)/documents/communities/$(communityId)
+          ).data.isPrivate == true
+          && request.resource.data.keys().hasOnly([
+            'communityId',
+            'requesterId',
+            'requesterName',
+            'requesterPhotoURL',
+            'status',
+            'createdAt',
+            'updatedAt'
+          ])
+          && request.resource.data.communityId == communityId
+          && request.resource.data.requesterId == request.auth.uid
+          && request.resource.data.status == 'pending';
+
+        allow update: if signedIn()
+          && get(
+            /databases/$(database)/documents/communities/$(communityId)
+          ).data.creatorId == request.auth.uid
+          && resource.data.status == 'pending'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status',
+            'reviewedAt',
+            'reviewedBy',
+            'updatedAt'
+          ])
+          && request.resource.data.status in ['approved', 'rejected']
+          && request.resource.data.reviewedBy == request.auth.uid;
+
+        allow delete: if false;
+      }
+
       match /posts/{postId} {
         allow read: if signedIn();
-        allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+
+        allow create: if signedIn()
+          && request.resource.data.userId == request.auth.uid;
+
         allow update, delete: if signedIn()
           && resource.data.userId == request.auth.uid
           && unchangedCounterFields();
 
         match /comments/{commentId} {
           allow read: if signedIn();
-          allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
-          allow update, delete: if signedIn() && resource.data.userId == request.auth.uid;
+
+          allow create: if signedIn()
+            && request.resource.data.userId == request.auth.uid;
+
+          allow update, delete: if signedIn()
+            && resource.data.userId == request.auth.uid;
         }
       }
     }
 
     match /listings/{listingId} {
       allow read: if signedIn();
+
       allow create: if signedIn()
         && request.resource.data.sellerId == request.auth.uid
         && request.resource.data.viewCount == 0
         && request.resource.data.savedCount == 0
         && request.resource.data.status == 'active'
         && request.resource.data.imageURLs.size() <= 5;
+
       allow update: if signedIn()
         && resource.data.sellerId == request.auth.uid
         && unchangedCounterFields();
-      allow delete: if signedIn() && resource.data.sellerId == request.auth.uid;
+
+      allow delete: if signedIn()
+        && resource.data.sellerId == request.auth.uid;
     }
 
     match /chats/{chatId} {
-      allow read, update: if signedIn() && request.auth.uid in resource.data.participants;
+      allow read, update: if signedIn()
+        && request.auth.uid in resource.data.participants;
+
       allow create: if signedIn()
         && request.resource.data.participants.size() == 2
         && request.auth.uid in request.resource.data.participants;
+
       allow delete: if false;
 
       match /messages/{messageId} {
         allow read: if signedIn()
-          && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+          && request.auth.uid in get(
+            /databases/$(database)/documents/chats/$(chatId)
+          ).data.participants;
+
         allow create: if signedIn()
-          && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants
+          && request.auth.uid in get(
+            /databases/$(database)/documents/chats/$(chatId)
+          ).data.participants
           && request.resource.data.senderId == request.auth.uid;
+
         allow update: if signedIn()
-          && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+          && request.auth.uid in get(
+            /databases/$(database)/documents/chats/$(chatId)
+          ).data.participants
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'read'
+          ]);
+
         allow delete: if false;
       }
+    }
+
+    /*
+     * collectionGroup sorgularının okunabilmesi için.
+     * subscribeToFollowers eski veya yeni alt koleksiyonlarda collectionGroup
+     * kullanıyorsa permission-denied alınmasını önler.
+     */
+    match /{path=**}/followers/{followerId} {
+      allow read: if signedIn();
+    }
+
+    match /{path=**}/following/{targetId} {
+      allow read: if signedIn();
+    }
+
+    match /{path=**}/follows/{targetId} {
+      allow read: if signedIn();
+      allow create, update, delete: if false;
+    }
+
+    /*
+     * Bazı eski servisler kök seviyede follows koleksiyonu kullanabilir.
+     * Sadece okuma uyumluluğu sağlanır.
+     */
+    match /follows/{followId} {
+      allow read: if signedIn();
+      allow create, update, delete: if false;
     }
   }
 }

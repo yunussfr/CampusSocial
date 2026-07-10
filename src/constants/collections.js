@@ -10,6 +10,7 @@ export const COLLECTIONS = {
   POSTS: 'posts',
   COMMENTS: 'comments',
   NOTIFICATIONS: 'notifications',
+  JOIN_REQUESTS: 'joinRequests',
   SAVED_EVENTS: 'savedEvents',
   SAVED_LISTINGS: 'savedListings',
   SAVES: 'saves',

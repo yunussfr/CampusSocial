@@ -196,7 +196,7 @@ export function CommunityListScreen({navigation}) {
     const max = draftFilters.maxMembers === '' ? null : parseMemberCount(draftFilters.maxMembers);
 
     if (min !== null && max !== null && min > max) {
-      Alert.alert('Filtre hatasi', 'Minimum uye sayisi maksimum uye sayisindan buyuk olamaz.');
+      Alert.alert('Filtre hatası', 'Minimum üye sayısı maksimum üye sayısından büyük olamaz.');
       return;
     }
 
@@ -246,7 +246,7 @@ export function CommunityListScreen({navigation}) {
         await joinSelectedCommunity(community.id, user.uid);
       }
     } catch (membershipError) {
-      Alert.alert('Islem tamamlanamadi', membershipError.message);
+      Alert.alert('İşlem tamamlanamadı', membershipError.message);
     } finally {
       setJoiningIds(current => current.filter(id => id !== community.id));
     }
@@ -312,7 +312,7 @@ export function CommunityListScreen({navigation}) {
                   Topluluklar
                 </Text>
                 <Text style={[styles.pageSubtitle, {color: theme.colors.mutedText}]}>
-                  Sana uygun kampus topluluklarini kesfet
+                  Sana uygun kampüs topluluklarını keşfet
                 </Text>
               </View>
               <Pressable
@@ -399,10 +399,10 @@ export function CommunityListScreen({navigation}) {
             {!safeAppliedFilters.recommendedOnly && recommendedCommunities.length > 0 ? (
               <>
                 <CommunitySectionHeader
-                  actionLabel="Tumunu Gor"
+                  actionLabel="Tümünü Gör"
                   icon={mdiStarOutline}
                   theme={theme}
-                  title="Sana Onerilen Topluluklar"
+                  title="Sana Önerilen Topluluklar"
                 />
                 <FlatList
                   horizontal

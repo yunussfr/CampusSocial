@@ -71,6 +71,70 @@ export async function joinCommunity(communityId, userId) {
     });
 }
 
+export async function requestCommunityJoin(communityId, requester) {
+  const now = firestore.FieldValue.serverTimestamp();
+
+  return firestoreDb
+    .collection(COLLECTIONS.COMMUNITIES)
+    .doc(communityId)
+    .collection(COLLECTIONS.JOIN_REQUESTS)
+    .doc(requester.uid)
+    .set({
+      communityId,
+      requesterId: requester.uid,
+      requesterName: requester.displayName || '',
+      requesterPhotoURL: requester.photoURL || '',
+      status: 'pending',
+      createdAt: now,
+      updatedAt: now,
+    });
+}
+
+export function subscribeToCommunityJoinRequest({
+  communityId,
+  userId,
+  onData,
+  onError,
+}) {
+  return firestoreDb
+    .collection(COLLECTIONS.COMMUNITIES)
+    .doc(communityId)
+    .collection(COLLECTIONS.JOIN_REQUESTS)
+    .doc(userId)
+    .onSnapshot(
+      doc => {
+        onData(doc.exists ? mapDoc(doc) : null);
+      },
+      error => {
+        if (onError) {
+          onError(error);
+        }
+      },
+    );
+}
+
+export async function updateCommunityJoinRequestStatus({
+  communityId,
+  requesterId,
+  reviewerId,
+  status,
+}) {
+  return firestoreDb
+    .collection(COLLECTIONS.COMMUNITIES)
+    .doc(communityId)
+    .collection(COLLECTIONS.JOIN_REQUESTS)
+    .doc(requesterId)
+    .set(
+      {
+        status,
+        reviewedAt: firestore.FieldValue.serverTimestamp(),
+        reviewedBy: reviewerId,
+        updatedAt: firestore.FieldValue.serverTimestamp(),
+      },
+      {merge: true},
+    );
+}
+
 export async function leaveCommunity(communityId, userId) {
   return firestoreDb
     .collection(COLLECTIONS.COMMUNITIES)

@@ -1,43 +1,62 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {
-  FlatList,
+  Alert,
   Image,
-  Pressable,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
-import { mdiBookmark, mdiBookmarkOutline } from '@mdi/js';
-import { MdiIcon } from '../../components/ui/MdiIcon';
-import { IMAGES } from '../../constants/assets';
-import { ROUTES } from '../../constants/routes';
-import { useAuth } from '../../context/AuthContext';
-import { useCommunities } from '../../context/CommunityContext';
-import { useSaved } from '../../context/SavedContext';
+import {useBottomTabBarHeight} from '@react-navigation/bottom-tabs';
+import {SafeAreaView} from 'react-native-safe-area-context';
+
+import {CommunityAccessBanner} from '../../components/community/CommunityAccessBanner';
+import {CommunityHeroHeader} from '../../components/community/CommunityHeroHeader';
+import {CommunityPostCard} from '../../components/community/CommunityPostCard';
+import {CommunityPostComposer} from '../../components/community/CommunityPostComposer';
+import {CommunityTabs} from '../../components/community/CommunityTabs';
+import {IMAGES} from '../../constants/assets';
+import {ROUTES} from '../../constants/routes';
+import {useAuth} from '../../context/AuthContext';
+import {useCommunities} from '../../context/CommunityContext';
+import {useSaved} from '../../context/SavedContext';
+import {useTheme} from '../../context/ThemeContext';
+import {
+  canCreateCommunityPost,
+  canOpenCommunityPostDetail,
+  canViewCommunityPosts,
+  isCommunityMember,
+  isCommunityPrivate,
+} from '../../utils/communityAccess';
+import {
+  formatCommunityCreatedAt,
+  formatMemberCount,
+  getCommunityCategory,
+  getCommunityDetailedMembers,
+  getCommunityDescription,
+  getCommunityMemberCount,
+  getCommunityRules,
+  getCommunityTags,
+  getCommunityPrivacyDisplayLabel,
+} from '../../utils/communityFormatters';
 
 const FEEDBACK_DURATION_MS = 1600;
 
-function getCommunityMemberIds(community) {
-  const ids = [
-    ...(Array.isArray(community?.memberIds) ? community.memberIds : []),
-    ...(Array.isArray(community?.members) ? community.members : []),
-  ];
-
-  return ids
-    .map(member => (typeof member === 'string' ? member : member?.userId || member?.uid))
-    .filter(Boolean);
-}
-
-export function CommunityDetailScreen({ navigation, route }) {
-  const { profile, user } = useAuth();
+export function CommunityDetailScreen({navigation, route}) {
+  const {theme} = useTheme();
+  const tabBarHeight = useBottomTabBarHeight();
+  const {profile, user} = useAuth();
   const {
     addCommunityPost,
     communities,
     joinSelectedCommunity,
     leaveSelectedCommunity,
     posts,
+    requestSelectedCommunityJoin,
     selectedCommunity,
+    startCommunityJoinRequestListener,
     startCommunityPostsListener,
   } = useCommunities();
   const {
@@ -47,24 +66,26 @@ export function CommunityDetailScreen({ navigation, route }) {
     savedPostIds = [],
     startSavesListener,
   } = useSaved();
+
+  const [activeTab, setActiveTab] = useState('posts');
   const [postContent, setPostContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [membershipSubmitting, setMembershipSubmitting] = useState(false);
   const [optimisticMemberDelta, setOptimisticMemberDelta] = useState(0);
   const [membershipStatus, setMembershipStatus] = useState(null);
-  const [membershipAction, setMembershipAction] = useState(null);
+  const [joinRequest, setJoinRequest] = useState(null);
   const [feedbackMessage, setFeedbackMessage] = useState('');
   const [membershipError, setMembershipError] = useState('');
+  const [showAccessBanner, setShowAccessBanner] = useState(true);
   const communityId = route.params?.communityId;
 
-  const community = useMemo(
-    () => {
-      const liveCommunity = communities.find(item => item.id === communityId);
+  const community = useMemo(() => {
+    const liveCommunity = communities.find(item => item.id === communityId);
+    const matchingSelectedCommunity =
+      selectedCommunity?.id === communityId ? selectedCommunity : null;
 
-      return liveCommunity || selectedCommunity;
-    },
-    [communities, communityId, selectedCommunity],
-  );
+    return liveCommunity || matchingSelectedCommunity;
+  }, [communities, communityId, selectedCommunity]);
 
   const joinedCommunityIds = useMemo(() => {
     return [
@@ -73,39 +94,31 @@ export function CommunityDetailScreen({ navigation, route }) {
     ];
   }, [profile?.joinedCommunityIds, user?.joinedCommunityIds]);
 
-  const serverMembership = useMemo(() => {
-    if (!user?.uid || !community?.id) {
-      return false;
-    }
-
-    return (
-      joinedCommunityIds.includes(community.id) ||
-      getCommunityMemberIds(community).includes(user.uid)
-    );
-  }, [community, joinedCommunityIds, user?.uid]);
+  const serverMembership = useMemo(
+    () => isCommunityMember(community, user, joinedCommunityIds),
+    [community, joinedCommunityIds, user],
+  );
 
   const isMember = membershipStatus ?? serverMembership;
+  const isPrivateCommunity = isCommunityPrivate(community);
+  const canViewPosts = canViewCommunityPosts(community, isMember);
+  const canCreatePost = canCreateCommunityPost(community, isMember);
+  const canOpenPostDetail = canOpenCommunityPostDetail(community, isMember);
   const displayedMemberCount = Math.max(
     0,
-    Number(community?.memberCount || 0) + optimisticMemberDelta,
+    getCommunityMemberCount(community) + optimisticMemberDelta,
   );
-  const membershipButtonLabel = feedbackMessage ||
-    (membershipSubmitting
-      ? membershipAction === 'leave'
-        ? 'Çıkarılıyor...'
-        : 'Ekleniyor...'
-      : isMember
-        ? 'Ayrıl'
-        : 'Katıl');
+  const detailMembers = getCommunityDetailedMembers(community);
+  const rules = getCommunityRules(community);
+  const tags = getCommunityTags(community);
+  const category = getCommunityCategory(community);
 
   useEffect(() => {
     if (!communityId) {
       return undefined;
     }
 
-    const unsubscribe = startCommunityPostsListener(communityId);
-
-    return unsubscribe;
+    return startCommunityPostsListener(communityId);
   }, [communityId, startCommunityPostsListener]);
 
   useEffect(() => {
@@ -117,10 +130,31 @@ export function CommunityDetailScreen({ navigation, route }) {
   }, [startSavesListener, user?.uid]);
 
   useEffect(() => {
+    if (!communityId || !user?.uid || !isPrivateCommunity || serverMembership) {
+      setJoinRequest(null);
+      return undefined;
+    }
+
+    return startCommunityJoinRequestListener({
+      communityId,
+      userId: user.uid,
+      onData: setJoinRequest,
+      onError: error => setMembershipError(error.message),
+    });
+  }, [
+    communityId,
+    isPrivateCommunity,
+    serverMembership,
+    startCommunityJoinRequestListener,
+    user?.uid,
+  ]);
+
+  useEffect(() => {
     setMembershipStatus(null);
-    setMembershipAction(null);
     setOptimisticMemberDelta(0);
     setMembershipError('');
+    setJoinRequest(null);
+    setShowAccessBanner(true);
   }, [community?.id, community?.memberCount, serverMembership]);
 
   useEffect(() => {
@@ -137,9 +171,9 @@ export function CommunityDetailScreen({ navigation, route }) {
 
   if (!community) {
     return (
-      <View style={styles.centerContent}>
-        <Text style={styles.title}>Topluluk bulunamadi</Text>
-      </View>
+      <SafeAreaView style={[styles.centerContent, {backgroundColor: theme.colors.background}]}>
+        <Text style={[styles.title, {color: theme.colors.text}]}>Topluluk bulunamadı</Text>
+      </SafeAreaView>
     );
   }
 
@@ -149,22 +183,31 @@ export function CommunityDetailScreen({ navigation, route }) {
     }
 
     const nextIsMember = !isMember;
-    const delta = nextIsMember ? 1 : -1;
-    const nextAction = nextIsMember ? 'join' : 'leave';
 
     setMembershipSubmitting(true);
-    setMembershipAction(nextAction);
     setMembershipError('');
-    setMembershipStatus(nextIsMember);
-    setOptimisticMemberDelta(delta);
 
     try {
       if (nextIsMember) {
+        if (isPrivateCommunity) {
+          await requestSelectedCommunityJoin(community.id, {
+            uid: user.uid,
+            displayName: profile?.displayName || user?.displayName || '',
+            photoURL: profile?.photoURL || user?.photoURL || '',
+          });
+          setFeedbackMessage('Katılım isteğin gönderildi');
+          return;
+        }
+
+        setMembershipStatus(true);
+        setOptimisticMemberDelta(1);
         await joinSelectedCommunity(community.id, user.uid);
-        setFeedbackMessage("Hub'a eklendi");
+        setFeedbackMessage('Topluluğa katıldın');
       } else {
+        setMembershipStatus(false);
+        setOptimisticMemberDelta(-1);
         await leaveSelectedCommunity(community.id, user.uid);
-        setFeedbackMessage("Hub'dan çıkarıldı");
+        setFeedbackMessage('Topluluktan ayrıldın');
       }
     } catch (error) {
       setMembershipStatus(isMember);
@@ -172,12 +215,11 @@ export function CommunityDetailScreen({ navigation, route }) {
       setMembershipError(error.message || 'Üyelik işlemi tamamlanamadı.');
     } finally {
       setMembershipSubmitting(false);
-      setMembershipAction(null);
     }
   }
 
   async function handleCreatePost() {
-    if (!postContent.trim()) {
+    if (!canCreatePost || !postContent.trim() || !user?.uid) {
       return;
     }
 
@@ -186,7 +228,7 @@ export function CommunityDetailScreen({ navigation, route }) {
     try {
       await addCommunityPost(
         community.id,
-        { content: postContent, imageURLs: [] },
+        {content: postContent, imageURLs: []},
         {
           uid: user.uid,
           displayName: profile?.displayName || user?.displayName || '',
@@ -194,6 +236,8 @@ export function CommunityDetailScreen({ navigation, route }) {
         },
       );
       setPostContent('');
+    } catch (error) {
+      Alert.alert('Gönderi paylaşılamadı', error.message);
     } finally {
       setSubmitting(false);
     }
@@ -204,256 +248,409 @@ export function CommunityDetailScreen({ navigation, route }) {
       return;
     }
 
-    if (savedPostIds.includes(post.id)) {
-      await removeSave(user.uid, getPostSaveId(community.id, post.id));
+    try {
+      if (savedPostIds.includes(post.id)) {
+        await removeSave(user.uid, getPostSaveId(community.id, post.id));
+        return;
+      }
+
+      await savePost(user.uid, community.id, post);
+    } catch (error) {
+      Alert.alert('Kaydetme işlemi tamamlanamadı', error.message);
+    }
+  }
+
+  function openPostDetail(post) {
+    if (!canOpenPostDetail) {
+      Alert.alert(
+        'Özel topluluk',
+        'Bu gönderiyi görmek için topluluğa katılmalısınız.',
+      );
       return;
     }
 
-    await savePost(user.uid, community.id, post);
+    navigation.navigate(ROUTES.POST_DETAIL, {
+      communityId: community.id,
+      postId: post.id,
+    });
+  }
+
+  function renderPostsTab() {
+    if (!canViewPosts) {
+      return (
+        <View style={[styles.lockedState, {backgroundColor: theme.colors.surface}]}>
+          <Text style={[styles.lockedTitle, {color: theme.colors.text}]}>
+            Bu özel bir topluluktur
+          </Text>
+          <Text style={[styles.lockedText, {color: theme.colors.mutedText}]}>
+            Gönderileri görmek ve paylaşım yapmak için topluluğa katıl.
+          </Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.tabContent}>
+        <CommunityPostComposer
+          disabled={!canCreatePost}
+          disabledText={
+            canCreatePost
+              ? undefined
+              : isPrivateCommunity
+                ? undefined
+                : 'Paylaşım bu toplulukta kapalı.'
+          }
+          onChangeText={setPostContent}
+          onSubmit={handleCreatePost}
+          profile={profile}
+          submitting={submitting}
+          theme={theme}
+          user={user}
+          value={postContent}
+        />
+
+        {feedbackMessage ? (
+          <Text style={[styles.feedbackText, {color: theme.colors.success}]}>
+            {feedbackMessage}
+          </Text>
+        ) : null}
+
+        <View style={styles.postList}>
+          {posts.length > 0 ? (
+            posts.map(post => (
+              <CommunityPostCard
+                canOpen={canOpenPostDetail}
+                isSaved={savedPostIds.includes(post.id)}
+                key={String(post.id)}
+                onPress={() => openPostDetail(post)}
+                onToggleSave={() => handleTogglePostSave(post)}
+                post={post}
+                theme={theme}
+              />
+            ))
+          ) : (
+            <View style={[styles.emptyState, {backgroundColor: theme.colors.surface}]}>
+              <Text style={[styles.emptyTitle, {color: theme.colors.text}]}>
+                Henüz gönderi yok
+              </Text>
+              <Text style={[styles.emptyText, {color: theme.colors.mutedText}]}>
+                Bu toplulukta ilk gönderi paylaşıldığında burada görünecek.
+              </Text>
+            </View>
+          )}
+        </View>
+      </View>
+    );
+  }
+
+  function renderAboutTab() {
+    return (
+      <View style={styles.tabContent}>
+        <InfoCard title="Açıklama" theme={theme}>
+          <Text style={[styles.infoText, {color: theme.colors.mutedText}]}>
+            {getCommunityDescription(community)}
+          </Text>
+        </InfoCard>
+
+        <InfoCard title="Topluluk Bilgileri" theme={theme}>
+          <InfoRow label="Kategori" value={category?.label || community?.category || 'Belirtilmedi'} theme={theme} />
+          <InfoRow label="Durum" value={getCommunityPrivacyDisplayLabel(community)} theme={theme} />
+          <InfoRow label="Üye Sayısı" value={formatMemberCount(community)} theme={theme} />
+          <InfoRow label="Oluşturulma" value={formatCommunityCreatedAt(community)} theme={theme} />
+        </InfoCard>
+
+        {rules.length > 0 ? (
+          <InfoCard title="Kurallar" theme={theme}>
+            {rules.map((rule, index) => (
+              <Text key={`${rule}-${index}`} style={[styles.infoText, {color: theme.colors.mutedText}]}>
+                {index + 1}. {rule}
+              </Text>
+            ))}
+          </InfoCard>
+        ) : null}
+
+        {tags.length > 0 ? (
+          <InfoCard title="Etiketler" theme={theme}>
+            <View style={styles.tagRow}>
+              {tags.map(tag => (
+                <View key={tag} style={[styles.tag, {backgroundColor: theme.colors.surfaceAlt}]}>
+                  <Text style={[styles.tagText, {color: theme.colors.primary}]}>#{tag}</Text>
+                </View>
+              ))}
+            </View>
+          </InfoCard>
+        ) : null}
+      </View>
+    );
+  }
+
+  function renderMembersTab() {
+    return (
+      <View style={styles.tabContent}>
+        {detailMembers.length > 0 ? (
+          detailMembers.map(member => (
+            <View
+              key={member.uid || member.userId || member.displayName}
+              style={[
+                styles.memberRow,
+                {backgroundColor: theme.colors.surface, borderColor: theme.colors.border},
+              ]}>
+              <Image
+                source={
+                  member.photoURL || member.avatarURL
+                    ? {uri: member.photoURL || member.avatarURL}
+                    : IMAGES.profileManPlaceholder
+                }
+                style={styles.memberAvatar}
+              />
+              <View style={styles.memberTextBlock}>
+                <Text style={[styles.memberName, {color: theme.colors.text}]}>
+                  {member.displayName || member.name || 'Topluluk üyesi'}
+                </Text>
+                <Text style={[styles.memberRole, {color: theme.colors.mutedText}]}>
+                  {member.role || 'Üye'}
+                </Text>
+              </View>
+            </View>
+          ))
+        ) : (
+          <View style={[styles.emptyState, {backgroundColor: theme.colors.surface}]}>
+            <Text style={[styles.emptyTitle, {color: theme.colors.text}]}>
+              Üye listesi hazır değil
+            </Text>
+            <Text style={[styles.emptyText, {color: theme.colors.mutedText}]}>
+              Bu topluluk için detaylı üye profilleri henüz veritabanında yok.
+            </Text>
+          </View>
+        )}
+      </View>
+    );
   }
 
   return (
-    <FlatList
-      ListHeaderComponent={
-        <View style={styles.header}>
-          <Image
-            source={
-              community.coverURL
-                ? { uri: community.coverURL }
-                : IMAGES.coverPlaceholder
-            }
-            style={styles.cover}
+    <SafeAreaView style={[styles.safeArea, {backgroundColor: theme.colors.background}]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.flex}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.container,
+            {paddingBottom: tabBarHeight + 34},
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+          <CommunityHeroHeader
+            community={community}
+            displayedMemberCount={displayedMemberCount}
+            isMember={isMember}
+            joinRequestStatus={joinRequest?.status}
+            membershipError={membershipError}
+            membershipSubmitting={membershipSubmitting}
+            onBack={() => navigation.goBack()}
+            onNotifications={() => navigation.navigate(ROUTES.NOTIFICATIONS)}
+            onSelectTab={setActiveTab}
+            onToggleMembership={handleToggleMembership}
+            theme={theme}
           />
-          <Text style={styles.title}>{community.name}</Text>
-          <Text style={styles.meta}>
-            {community.category} - {displayedMemberCount} üye
-          </Text>
-          <Text style={styles.description}>{community.description}</Text>
-          <Pressable
-            disabled={membershipSubmitting || !user?.uid}
-            onPress={handleToggleMembership}
-            style={[
-              styles.membershipButton,
-              isMember ? styles.leaveButton : styles.joinButton,
-              membershipSubmitting && styles.disabledButton,
-              feedbackMessage &&
-                (isMember ? styles.feedbackButton : styles.leaveFeedbackButton),
-            ]}>
-            <Text
-              style={[
-                styles.membershipButtonText,
-                isMember && !feedbackMessage
-                  ? styles.leaveButtonText
-                  : styles.joinButtonText,
-              ]}>
-              {membershipButtonLabel}
-            </Text>
-          </Pressable>
-          {membershipError ? (
-            <Text style={styles.membershipError}>{membershipError}</Text>
-          ) : null}
-          <Text style={styles.sectionTitle}>Yeni post</Text>
-          <TextInput
-            multiline
-            autoCorrect={false}
-            onChangeText={setPostContent}
-            placeholder="Toplulukla bir sey paylas..."
-            spellCheck={false}
-            style={styles.postInput}
-            value={postContent}
-          />
-          <Pressable
-            disabled={submitting}
-            onPress={handleCreatePost}
-            style={styles.primaryButton}>
-            <Text style={styles.primaryButtonText}>Post Paylas</Text>
-          </Pressable>
-          <Text style={styles.sectionTitle}>Postlar</Text>
-        </View>
-      }
-      contentContainerStyle={styles.container}
-      data={posts}
-      keyExtractor={item => item.id}
-      ListEmptyComponent={<Text style={styles.emptyText}>Henuz post yok.</Text>}
-      renderItem={({ item }) => (
-        <Pressable
-          onPress={() =>
-            navigation.navigate(ROUTES.POST_DETAIL, {
-              communityId: community.id,
-              postId: item.id,
-            })
-          }
-          style={styles.postCard}>
-          <View style={styles.postHeader}>
-            <Text style={styles.postAuthor}>
-              {item.author?.displayName || 'Anonim'}
-            </Text>
-            <Pressable
-              hitSlop={8}
-              onPress={event => {
-                event.stopPropagation?.();
-                handleTogglePostSave(item);
-              }}
-              style={styles.savePostButton}>
-              <MdiIcon
-                path={savedPostIds.includes(item.id) ? mdiBookmark : mdiBookmarkOutline}
-                size={22}
-                color={savedPostIds.includes(item.id) ? '#2563EB' : '#64748B'}
+
+          <View style={styles.body}>
+            {showAccessBanner ? (
+              <CommunityAccessBanner
+                community={community}
+                isMember={isMember}
+                onDismiss={() => setShowAccessBanner(false)}
+                theme={theme}
               />
-            </Pressable>
+            ) : null}
+
+            <View
+              style={[
+                styles.tabsCard,
+                {backgroundColor: theme.colors.surface, shadowColor: theme.colors.shadow},
+              ]}>
+              <CommunityTabs
+                activeTab={activeTab}
+                onChangeTab={setActiveTab}
+                theme={theme}
+              />
+
+              {activeTab === 'posts' ? renderPostsTab() : null}
+              {activeTab === 'about' ? renderAboutTab() : null}
+              {activeTab === 'members' ? renderMembersTab() : null}
+            </View>
           </View>
-          <Text style={styles.postContent}>{item.content}</Text>
-          <Text style={styles.meta}>
-            {item.likeCount || 0} begeni - {item.commentCount || 0} yorum
-          </Text>
-        </Pressable>
-      )}
-    />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+function InfoCard({children, theme, title}) {
+  return (
+    <View style={[styles.infoCard, {borderColor: theme.colors.border}]}>
+      <Text style={[styles.infoTitle, {color: theme.colors.text}]}>{title}</Text>
+      {children}
+    </View>
+  );
+}
+
+function InfoRow({label, theme, value}) {
+  return (
+    <View style={styles.infoRow}>
+      <Text style={[styles.infoLabel, {color: theme.colors.subtleText}]}>{label}</Text>
+      <Text style={[styles.infoValue, {color: theme.colors.text}]}>{value}</Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
+  flex: {
+    flex: 1,
+  },
   centerContent: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: '#F8FAFC',
-  },
-  container: {
-    padding: 20,
-    paddingBottom: 110,
-    backgroundColor: '#F8FAFC',
-  },
-  header: {
-    gap: 12,
-  },
-  cover: {
-    width: '100%',
-    height: 160,
-    borderRadius: 12,
-    backgroundColor: '#E2E8F0',
   },
   title: {
-    color: '#0B1C30',
-    fontSize: 28,
-    fontWeight: '800',
+    fontSize: 24,
+    fontWeight: '900',
   },
-  description: {
-    color: '#334155',
-    fontSize: 15,
-    lineHeight: 22,
+  container: {
+    flexGrow: 1,
   },
-  meta: {
-    color: '#64748B',
-    fontSize: 13,
-    lineHeight: 18,
+  body: {
+    gap: 14,
+    paddingHorizontal: 16,
+    paddingTop: 14,
   },
-  primaryButton: {
-    flex: 1,
+  tabsCard: {
+    overflow: 'hidden',
+    borderRadius: 20,
+    shadowOffset: {width: 0, height: 10},
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 3,
+  },
+  tabContent: {
+    gap: 14,
+    padding: 12,
+  },
+  postList: {
+    gap: 12,
+  },
+  lockedState: {
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 46,
-    borderRadius: 10,
-    backgroundColor: '#004AC6',
-  },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  membershipButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 46,
-    borderRadius: 10,
-  },
-  joinButton: {
-    backgroundColor: '#004AC6',
-  },
-  leaveButton: {
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    backgroundColor: '#FFFFFF',
-  },
-  feedbackButton: {
-    borderWidth: 0,
-    backgroundColor: '#16A34A',
-  },
-  leaveFeedbackButton: {
-    borderWidth: 0,
-    backgroundColor: '#DC2626',
-  },
-  disabledButton: {
-    opacity: 0.72,
-  },
-  membershipButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  joinButtonText: {
-    color: '#FFFFFF',
-  },
-  leaveButtonText: {
-    color: '#0B1C30',
-  },
-  membershipError: {
-    color: '#DC2626',
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  sectionTitle: {
-    color: '#0B1C30',
-    fontSize: 18,
-    fontWeight: '700',
-    marginTop: 12,
-  },
-  postInput: {
-    minHeight: 86,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 10,
-    color: '#0B1C30',
-    backgroundColor: '#FFFFFF',
-    textAlignVertical: 'top',
-  },
-  postCard: {
-    gap: 6,
-    padding: 16,
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-  },
-  postAuthor: {
-    flex: 1,
-    color: '#0B1C30',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  postHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: 8,
+    padding: 24,
+    borderRadius: 18,
   },
-  savePostButton: {
-    width: 34,
-    height: 34,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 17,
-    backgroundColor: '#EFF6FF',
+  lockedTitle: {
+    fontSize: 17,
+    fontWeight: '900',
   },
-  postContent: {
-    color: '#334155',
+  lockedText: {
+    textAlign: 'center',
     fontSize: 14,
     lineHeight: 20,
+    fontWeight: '600',
+  },
+  feedbackText: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    padding: 22,
+    borderRadius: 18,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '900',
   },
   emptyText: {
-    color: '#64748B',
+    textAlign: 'center',
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '600',
+  },
+  infoCard: {
+    gap: 10,
+    padding: 14,
+    borderWidth: 1,
+    borderRadius: 16,
+  },
+  infoTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  infoText: {
+    fontSize: 14,
+    lineHeight: 21,
+    fontWeight: '600',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  infoLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  infoValue: {
+    maxWidth: '58%',
+    textAlign: 'right',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  tagRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  tag: {
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 999,
+  },
+  tagText: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  memberRow: {
+    minHeight: 72,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderRadius: 16,
+  },
+  memberAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#E2E8F0',
+  },
+  memberTextBlock: {
+    minWidth: 0,
+    flex: 1,
+  },
+  memberName: {
     fontSize: 15,
-    marginTop: 12,
+    fontWeight: '900',
+  },
+  memberRole: {
+    marginTop: 3,
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

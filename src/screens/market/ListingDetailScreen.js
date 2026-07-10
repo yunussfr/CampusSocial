@@ -1,6 +1,7 @@
 import React, {useEffect, useMemo, useState} from 'react';
 import {
   Alert,
+  Animated,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -26,6 +27,7 @@ import {ListingSummaryCard} from '../../components/market/listing/ListingSummary
 import {MdiIcon} from '../../components/ui/MdiIcon';
 import {LISTING_DETAIL_FIELDS} from '../../constants/listingOptions';
 import {ROUTES} from '../../constants/routes';
+import {useAnalytics} from '../../context/AnalyticsContext';
 import {useAuth} from '../../context/AuthContext';
 import {useChats} from '../../context/ChatContext';
 import {useMarket} from '../../context/MarketContext';
@@ -38,8 +40,11 @@ import {
   getSellerTypeLabel,
   getShippingPayerLabel,
 } from '../../utils/listingFormatters';
+import {ANALYTICS_EVENTS} from '../../services/analyticsService';
 
 export function ListingDetailScreen({navigation}) {
+  const heroMotion = useMemo(() => new Animated.Value(0), []);
+  const {logEvent} = useAnalytics();
   const {profile, user} = useAuth();
   const tabBarHeight = useBottomTabBarHeight();
   const {startDirectChat} = useChats();
@@ -58,6 +63,15 @@ export function ListingDetailScreen({navigation}) {
 
   const isOwnListing = Boolean(user?.uid && listing?.sellerId === user.uid);
   const isSaved = Boolean(listing?.id && savedListingIds.includes(listing.id));
+
+  useEffect(() => {
+    heroMotion.setValue(0);
+    Animated.timing(heroMotion, {
+      toValue: 1,
+      duration: 360,
+      useNativeDriver: true,
+    }).start();
+  }, [heroMotion, listing?.id]);
 
   useEffect(() => {
     if (!user?.uid) {
@@ -115,8 +129,14 @@ export function ListingDetailScreen({navigation}) {
     try {
       if (isSaved) {
         await removeSave(user.uid, getListingSaveId(listing.id));
+        logEvent(ANALYTICS_EVENTS.LISTING_UNSAVE, {
+          listing_id: listing.id,
+        });
       } else {
         await saveListing(user.uid, listing);
+        logEvent(ANALYTICS_EVENTS.LISTING_SAVE, {
+          listing_id: listing.id,
+        });
       }
     } catch (error) {
       Alert.alert('Kaydetme basarisiz', error.message);
@@ -178,6 +198,10 @@ export function ListingDetailScreen({navigation}) {
         relatedListingId: listing.id,
       });
 
+      logEvent(ANALYTICS_EVENTS.SELLER_MESSAGE_START, {
+        listing_id: listing.id,
+        seller_id: listing.seller?.uid || listing.sellerId || '',
+      });
       navigation.navigate(ROUTES.CHAT_DETAIL, {chatId});
     } catch (error) {
       Alert.alert('Mesaj acilamadi', error.message);
@@ -196,7 +220,21 @@ export function ListingDetailScreen({navigation}) {
           {paddingBottom: tabBarHeight + 152},
         ]}
         showsVerticalScrollIndicator={false}>
-        <View style={styles.heroWrap}>
+        <Animated.View
+          style={[
+            styles.heroWrap,
+            {
+              opacity: heroMotion,
+              transform: [
+                {
+                  translateY: heroMotion.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [18, 0],
+                  }),
+                },
+              ],
+            },
+          ]}>
           <ListingImageGallery
             listing={listing}
             selectedIndex={selectedImageIndex}
@@ -222,7 +260,7 @@ export function ListingDetailScreen({navigation}) {
               </Pressable>
             </View>
           </View>
-        </View>
+        </Animated.View>
 
         <ListingSummaryCard listing={listing} />
 

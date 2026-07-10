@@ -1,6 +1,9 @@
-import React, {useState} from 'react';
+import React, {useMemo, useState} from 'react';
 import {
   Image,
+  ImageBackground,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,10 +12,24 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import {launchImageLibrary} from 'react-native-image-picker';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import {
+  mdiCameraOutline,
+  mdiChevronLeft,
+  mdiCodeTags,
+  mdiImagePlusOutline,
+  mdiLockOutline,
+  mdiPlus,
+  mdiShieldCheckOutline,
+  mdiWeb,
+} from '@mdi/js';
 
+import {MdiIcon} from '../../components/ui/MdiIcon';
 import {useAuth} from '../../context/AuthContext';
 import {useCommunities} from '../../context/CommunityContext';
+import {useTheme} from '../../context/ThemeContext';
 import {
   uploadCommunityCover,
   uploadCommunityIcon,
@@ -23,18 +40,21 @@ import {
 } from '../../utils/communityCategories';
 
 export function CreateCommunityScreen({navigation}) {
+  const {theme} = useTheme();
   const {profile, user} = useAuth();
   const {addCommunity, setCommunityMedia} = useCommunities();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
-  const [showCategories, setShowCategories] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
   const [coverAsset, setCoverAsset] = useState(null);
   const [iconAsset, setIconAsset] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
-  const selectedCategory = getCommunityCategoryByKey(category);
+  const selectedCategory = useMemo(
+    () => getCommunityCategoryByKey(category),
+    [category],
+  );
 
   async function pickImage(setAsset) {
     const result = await launchImageLibrary({
@@ -55,9 +75,31 @@ export function CreateCommunityScreen({navigation}) {
     setAsset(result.assets?.[0] || null);
   }
 
-  async function handleSubmit() {
+  function validateForm() {
+    if (!user?.uid) {
+      return 'Topluluk oluşturmak için oturum açmalısın.';
+    }
+
+    if (!name.trim()) {
+      return 'Topluluk adı boş olamaz.';
+    }
+
+    if (!description.trim()) {
+      return 'Topluluk açıklaması boş olamaz.';
+    }
+
     if (!selectedCategory) {
-      setError('Lutfen bir topluluk kategorisi secin.');
+      return 'Lütfen bir topluluk kategorisi seç.';
+    }
+
+    return null;
+  }
+
+  async function handleSubmit() {
+    const validationError = validateForm();
+
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
@@ -104,232 +146,410 @@ export function CreateCommunityScreen({navigation}) {
   }
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.container}
-      keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>Topluluk Olustur</Text>
-      <Text style={styles.subtitle}>Topluluk bilgilerini ekle.</Text>
-      <TextInput
-        autoCorrect={false}
-        onChangeText={setName}
-        placeholder="Topluluk adi"
-        spellCheck={false}
-        style={styles.input}
-        value={name}
-      />
-      <TextInput
-        multiline
-        autoCorrect={false}
-        onChangeText={setDescription}
-        placeholder="Aciklama"
-        spellCheck={false}
-        style={[styles.input, styles.multilineInput]}
-        value={description}
-      />
-      <Pressable
-        onPress={() => setShowCategories(prev => !prev)}
-        style={[styles.input, styles.categorySelector]}>
-        <Text
-          style={[
-            styles.categorySelectorText,
-            !selectedCategory && styles.categoryPlaceholder,
-          ]}>
-          {selectedCategory?.label || 'Kategori sec'}
-        </Text>
-        <Text style={styles.categoryArrow}>
-          {showCategories ? 'Yukari' : 'Asagi'}
-        </Text>
-      </Pressable>
-      {showCategories ? (
-        <View style={styles.categoryDropdown}>
-          {COMMUNITY_CATEGORIES.map(cat => (
+    <SafeAreaView style={[styles.safeArea, {backgroundColor: theme.colors.background}]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.flex}>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+          <View style={styles.header}>
             <Pressable
-              key={cat.key}
-              onPress={() => {
-                setCategory(cat.key);
-                setShowCategories(false);
-              }}
-              style={[
-                styles.categoryOption,
-                category === cat.key && styles.categoryOptionActive,
-              ]}>
-              <Text
-                style={[
-                  styles.categoryOptionText,
-                  category === cat.key && styles.categoryOptionTextActive,
-                ]}>
-                {cat.label}
-              </Text>
+              accessibilityRole="button"
+              onPress={() => navigation.goBack()}
+              style={[styles.backButton, {backgroundColor: theme.colors.surface}]}>
+              <MdiIcon path={mdiChevronLeft} size={28} color={theme.colors.text} />
             </Pressable>
-          ))}
-        </View>
-      ) : null}
-      <View style={styles.switchRow}>
-        <Text style={styles.switchLabel}>Private topluluk</Text>
-        <Switch onValueChange={setIsPrivate} value={isPrivate} />
-      </View>
-      <Pressable
-        onPress={() => pickImage(setCoverAsset)}
-        style={styles.secondaryButton}>
-        <Text style={styles.secondaryButtonText}>
-          {coverAsset ? 'Cover degistir' : 'Cover sec'}
-        </Text>
-      </Pressable>
-      {coverAsset?.uri ? (
-        <Image source={{uri: coverAsset.uri}} style={styles.coverPreview} />
-      ) : null}
-      <Pressable
-        onPress={() => pickImage(setIconAsset)}
-        style={styles.secondaryButton}>
-        <Text style={styles.secondaryButtonText}>
-          {iconAsset ? 'Icon degistir' : 'Icon sec'}
-        </Text>
-      </Pressable>
-      {iconAsset?.uri ? (
-        <Image source={{uri: iconAsset.uri}} style={styles.iconPreview} />
-      ) : null}
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Pressable
-        disabled={submitting}
-        onPress={handleSubmit}
-        style={[styles.primaryButton, submitting && styles.disabledButton]}>
-        <Text style={styles.primaryButtonText}>
-          {submitting ? 'Kaydediliyor...' : 'Toplulugu Kaydet'}
-        </Text>
-      </Pressable>
-    </ScrollView>
+            <Text style={[styles.headerTitle, {color: theme.colors.text}]}>
+              Topluluk Oluştur
+            </Text>
+            <View style={styles.headerSpacer} />
+          </View>
+
+          <View style={styles.previewBlock}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => pickImage(setCoverAsset)}
+              style={styles.coverPicker}>
+              {coverAsset?.uri ? (
+                <ImageBackground
+                  imageStyle={styles.coverRadius}
+                  resizeMode="cover"
+                  source={{uri: coverAsset.uri}}
+                  style={styles.coverPreview}>
+                  <View style={styles.coverOverlay}>
+                    <MdiIcon path={mdiImagePlusOutline} size={24} color="#FFFFFF" />
+                    <Text style={styles.coverOverlayText}>Cover değiştir</Text>
+                  </View>
+                </ImageBackground>
+              ) : (
+                <LinearGradient
+                  colors={[selectedCategory?.color || '#2563EB', '#0F4FD8', '#FF8A1F']}
+                  end={{x: 1, y: 1}}
+                  start={{x: 0, y: 0}}
+                  style={styles.coverPreview}>
+                  <MdiIcon path={mdiImagePlusOutline} size={34} color="#FFFFFF" />
+                  <Text style={styles.coverTitle}>Cover görseli seç</Text>
+                  <Text style={styles.coverSubtitle}>
+                    Topluluğunu ilk bakışta tanıtan bir görsel ekle.
+                  </Text>
+                </LinearGradient>
+              )}
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => pickImage(setIconAsset)}
+              style={styles.iconPicker}>
+              {iconAsset?.uri ? (
+                <Image source={{uri: iconAsset.uri}} style={styles.iconPreview} />
+              ) : (
+                <LinearGradient
+                  colors={[selectedCategory?.color || '#2563EB', '#1D4ED8']}
+                  style={styles.iconPreview}>
+                  <MdiIcon path={selectedCategory?.icon || mdiCodeTags} size={32} color="#FFFFFF" />
+                </LinearGradient>
+              )}
+              <View style={styles.iconBadge}>
+                <MdiIcon path={mdiCameraOutline} size={15} color="#FFFFFF" />
+              </View>
+            </Pressable>
+          </View>
+
+          <View style={[styles.card, {backgroundColor: theme.colors.surface}]}>
+            <Text style={[styles.sectionTitle, {color: theme.colors.text}]}>
+              Temel Bilgiler
+            </Text>
+            <TextInput
+              autoCorrect={false}
+              onChangeText={setName}
+              placeholder="Topluluk adı"
+              placeholderTextColor={theme.colors.subtleText}
+              spellCheck={false}
+              style={[styles.input, {borderColor: theme.colors.border, color: theme.colors.text}]}
+              value={name}
+            />
+            <TextInput
+              multiline
+              autoCorrect={false}
+              onChangeText={setDescription}
+              placeholder="Topluluğun amacı, kapsamı ve kimlere hitap ettiği..."
+              placeholderTextColor={theme.colors.subtleText}
+              spellCheck={false}
+              style={[
+                styles.input,
+                styles.multilineInput,
+                {borderColor: theme.colors.border, color: theme.colors.text},
+              ]}
+              value={description}
+            />
+          </View>
+
+          <View style={[styles.card, {backgroundColor: theme.colors.surface}]}>
+            <Text style={[styles.sectionTitle, {color: theme.colors.text}]}>
+              Kategori
+            </Text>
+            <View style={styles.categoryGrid}>
+              {COMMUNITY_CATEGORIES.map(cat => {
+                const active = category === cat.key;
+
+                return (
+                  <Pressable
+                    accessibilityRole="button"
+                    key={cat.key}
+                    onPress={() => setCategory(cat.key)}
+                    style={[
+                      styles.categoryChip,
+                      {
+                        backgroundColor: active ? cat.color : theme.colors.surfaceAlt,
+                        borderColor: active ? cat.color : theme.colors.border,
+                      },
+                    ]}>
+                    <MdiIcon
+                      path={cat.icon}
+                      size={18}
+                      color={active ? '#FFFFFF' : theme.colors.primary}
+                    />
+                    <Text
+                      numberOfLines={1}
+                      style={[
+                        styles.categoryText,
+                        {color: active ? '#FFFFFF' : theme.colors.text},
+                      ]}>
+                      {cat.shortLabel || cat.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          <View style={[styles.card, styles.privacyCard, {backgroundColor: theme.colors.surface}]}>
+            <View style={styles.privacyIcon}>
+              <MdiIcon
+                path={isPrivate ? mdiLockOutline : mdiWeb}
+                size={28}
+                color={theme.colors.primary}
+              />
+            </View>
+            <View style={styles.privacyTextBlock}>
+              <Text style={[styles.privacyTitle, {color: theme.colors.text}]}>
+                {isPrivate ? 'Özel Topluluk' : 'Açık Topluluk'}
+              </Text>
+              <Text style={[styles.privacyDescription, {color: theme.colors.mutedText}]}>
+                {isPrivate
+                  ? 'Sadece katılan üyeler gönderileri görebilir ve paylaşım yapabilir.'
+                  : 'Gönderiler herkese açık görünür.'}
+              </Text>
+            </View>
+            <Switch
+              onValueChange={setIsPrivate}
+              thumbColor="#FFFFFF"
+              trackColor={{false: '#CBD5E1', true: theme.colors.primary}}
+              value={isPrivate}
+            />
+          </View>
+
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+
+          <Pressable
+            disabled={submitting}
+            onPress={handleSubmit}
+            style={[styles.submitWrap, submitting && styles.disabledButton]}>
+            <LinearGradient
+              colors={[theme.colors.primary, theme.colors.accent]}
+              end={{x: 1, y: 1}}
+              start={{x: 0, y: 0}}
+              style={styles.submitButton}>
+              <MdiIcon
+                path={submitting ? mdiShieldCheckOutline : mdiPlus}
+                size={22}
+                color="#FFFFFF"
+              />
+              <Text style={styles.submitText}>
+                {submitting ? 'Kaydediliyor...' : 'Topluluğu Kaydet'}
+              </Text>
+            </LinearGradient>
+          </Pressable>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    gap: 12,
-    padding: 24,
-    backgroundColor: '#F8FAFC',
-  },
-  title: {
-    color: '#0B1C30',
-    fontSize: 28,
-    fontWeight: '800',
-  },
-  subtitle: {
-    color: '#64748B',
-    fontSize: 15,
-    marginBottom: 12,
-  },
-  input: {
-    minHeight: 48,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 10,
-    color: '#0B1C30',
-    backgroundColor: '#FFFFFF',
-  },
-  multilineInput: {
-    minHeight: 110,
-    paddingTop: 12,
-    textAlignVertical: 'top',
-  },
-  categorySelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    minHeight: 48,
-  },
-  categorySelectorText: {
-    fontSize: 14,
-    color: '#0B1C30',
+  safeArea: {
     flex: 1,
   },
-  categoryPlaceholder: {
-    color: '#94A3B8',
+  flex: {
+    flex: 1,
   },
-  categoryArrow: {
-    fontSize: 11,
-    color: '#64748B',
-    marginLeft: 8,
+  container: {
+    flexGrow: 1,
+    gap: 16,
+    padding: 16,
+    paddingBottom: 34,
   },
-  categoryDropdown: {
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 10,
-    backgroundColor: '#FFFFFF',
-    overflow: 'hidden',
-    marginTop: -8,
-  },
-  categoryOption: {
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  categoryOptionActive: {
-    backgroundColor: '#EEF4FF',
-  },
-  categoryOptionText: {
-    fontSize: 14,
-    color: '#334155',
-  },
-  categoryOptionTextActive: {
-    color: '#004AC6',
-    fontWeight: '700',
-  },
-  switchRow: {
-    minHeight: 48,
+  header: {
+    minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  switchLabel: {
-    color: '#0B1C30',
+  backButton: {
+    width: 46,
+    height: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 16,
+    shadowColor: '#000000',
+    shadowOffset: {width: 0, height: 8},
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    elevation: 4,
+  },
+  headerTitle: {
+    fontSize: 21,
+    fontWeight: '900',
+  },
+  headerSpacer: {
+    width: 46,
+  },
+  previewBlock: {
+    minHeight: 236,
+  },
+  coverPicker: {
+    overflow: 'hidden',
+    borderRadius: 20,
+  },
+  coverPreview: {
+    height: 184,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 18,
+    borderRadius: 20,
+  },
+  coverRadius: {
+    borderRadius: 20,
+  },
+  coverOverlay: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    borderRadius: 22,
+    backgroundColor: 'rgba(15,23,42,0.42)',
+  },
+  coverOverlayText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  coverTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '900',
+  },
+  coverSubtitle: {
+    maxWidth: 260,
+    textAlign: 'center',
+    color: 'rgba(255,255,255,0.86)',
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '700',
+  },
+  iconPicker: {
+    position: 'absolute',
+    left: 18,
+    bottom: 0,
+    width: 92,
+    height: 92,
+    borderWidth: 5,
+    borderColor: '#FFFFFF',
+    borderRadius: 46,
+    backgroundColor: '#EEF4FF',
+  },
+  iconPreview: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 46,
+  },
+  iconBadge: {
+    position: 'absolute',
+    right: -2,
+    bottom: 5,
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    borderRadius: 14,
+    backgroundColor: '#2563EB',
+  },
+  card: {
+    gap: 12,
+    padding: 16,
+    borderRadius: 18,
+    shadowColor: '#000000',
+    shadowOffset: {width: 0, height: 8},
+    shadowOpacity: 0.05,
+    shadowRadius: 14,
+    elevation: 2,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '900',
+  },
+  input: {
+    minHeight: 52,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderRadius: 14,
     fontSize: 15,
     fontWeight: '600',
   },
-  primaryButton: {
+  multilineInput: {
+    minHeight: 118,
+    paddingTop: 14,
+    textAlignVertical: 'top',
+  },
+  categoryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 9,
+  },
+  categoryChip: {
+    minHeight: 42,
+    maxWidth: '48%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingHorizontal: 11,
+    borderWidth: 1,
+    borderRadius: 21,
+  },
+  categoryText: {
+    minWidth: 0,
+    flexShrink: 1,
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  privacyCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  privacyIcon: {
+    width: 54,
+    height: 54,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 48,
-    borderRadius: 10,
-    backgroundColor: '#004AC6',
+    borderRadius: 27,
+    backgroundColor: '#EEF4FF',
+  },
+  privacyTextBlock: {
+    minWidth: 0,
+    flex: 1,
+  },
+  privacyTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  privacyDescription: {
+    marginTop: 3,
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: '600',
+  },
+  submitWrap: {
+    overflow: 'hidden',
+    borderRadius: 16,
+  },
+  submitButton: {
+    minHeight: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 9,
+    borderRadius: 16,
+  },
+  submitText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '900',
   },
   disabledButton: {
-    opacity: 0.65,
-  },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  secondaryButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 46,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 10,
-    backgroundColor: '#FFFFFF',
-  },
-  secondaryButtonText: {
-    color: '#004AC6',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  coverPreview: {
-    width: '100%',
-    height: 150,
-    borderRadius: 12,
-    backgroundColor: '#E2E8F0',
-  },
-  iconPreview: {
-    width: 72,
-    height: 72,
-    borderRadius: 16,
-    backgroundColor: '#E2E8F0',
+    opacity: 0.68,
   },
   error: {
     color: '#DC2626',
     fontSize: 14,
+    fontWeight: '800',
   },
 });

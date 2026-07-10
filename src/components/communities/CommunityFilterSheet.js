@@ -143,7 +143,7 @@ export function CommunityFilterSheet({
                 <View style={styles.sectionLeft}>
                   <MdiIcon path={mdiFilterVariant} size={22} color={theme.colors.text} />
                   <Text style={[styles.sectionTitle, {color: theme.colors.text}]}>
-                    Uye Siniri
+                    Üye Sınırı
                   </Text>
                 </View>
                 <Text style={[styles.rangeLabel, {color: theme.colors.text}]}>
@@ -154,7 +154,7 @@ export function CommunityFilterSheet({
                 <TextInput
                   keyboardType="number-pad"
                   onChangeText={value => patchFilters({minMembers: value})}
-                  placeholder="Minimum uye"
+                  placeholder="Minimum üye"
                   placeholderTextColor="#94A3B8"
                   style={styles.rangeInput}
                   value={String(filters.minMembers)}
@@ -162,7 +162,7 @@ export function CommunityFilterSheet({
                 <TextInput
                   keyboardType="number-pad"
                   onChangeText={value => patchFilters({maxMembers: value})}
-                  placeholder="Maksimum uye"
+                  placeholder="Maksimum üye"
                   placeholderTextColor="#94A3B8"
                   style={styles.rangeInput}
                   value={String(filters.maxMembers)}
@@ -175,7 +175,7 @@ export function CommunityFilterSheet({
                     Kategoriler
                   </Text>
                   <Text style={[styles.selectedCount, {color}]}>
-                    {filters.categoryKeys.length} secildi
+                    {filters.categoryKeys.length} seçildi
                   </Text>
                 </View>
                 <View style={styles.choicesWrap}>
@@ -198,7 +198,7 @@ export function CommunityFilterSheet({
                 </View>
               </View>
 
-              <Text style={[styles.sectionTitle, {color: theme.colors.text}]}>Sirala</Text>
+              <Text style={[styles.sectionTitle, {color: theme.colors.text}]}>Sırala</Text>
               <View style={styles.sortChoices}>
                 {COMMUNITY_SORT_OPTIONS.map(option => (
                   <SortChoice
@@ -214,11 +214,11 @@ export function CommunityFilterSheet({
                 <ToggleRow
                   disabled={!supportedFilters?.joinOpenOnly}
                   icon={mdiLockOpenOutline}
-                  title="Sadece katilima acik topluluklar"
+                  title="Sadece katılıma açık topluluklar"
                   description={
                     supportedFilters?.joinOpenOnly
                       ? undefined
-                      : 'Veri modelinde yalnizca ozel/acik bilgisi var.'
+                      : 'Veri modelinde yalnızca özel/açık bilgisi var.'
                   }
                   value={filters.joinOpenOnly}
                   onChange={value => patchFilters({joinOpenOnly: value})}
@@ -226,7 +226,7 @@ export function CommunityFilterSheet({
                 <View style={styles.divider} />
                 <ToggleRow
                   icon={mdiStarOutline}
-                  title="Onerilenleri goster"
+                  title="Önerilenleri göster"
                   value={filters.recommendedOnly}
                   onChange={value => patchFilters({recommendedOnly: value})}
                 />
@@ -235,7 +235,7 @@ export function CommunityFilterSheet({
                     <View style={styles.divider} />
                     <ToggleRow
                       icon={mdiFilterVariant}
-                      title="Katilmadigim topluluklar"
+                      title="Katılmadığım topluluklar"
                       value={filters.excludeJoined}
                       onChange={value => patchFilters({excludeJoined: value})}
                     />

@@ -175,6 +175,18 @@ export function ProfileScreen({navigation}) {
     setSavingTheme(false);
   }
 
+  function handleOpenConnections(initialTab) {
+    if (!user?.uid) {
+      return;
+    }
+
+    navigation.navigate(ROUTES.FOLLOW_CONNECTIONS, {
+      userId: user.uid,
+      initialTab,
+      titleName: name,
+    });
+  }
+
   return (
     <ScrollView
       contentContainerStyle={[
@@ -248,6 +260,7 @@ export function ProfileScreen({navigation}) {
           icon={mdiAccountGroup}
           label="Takipçi"
           tone="#2563EB"
+          onPress={() => handleOpenConnections('followers')}
           value={Number(profile?.followersCount || 0)}
         />
         <StatCard
@@ -255,6 +268,7 @@ export function ProfileScreen({navigation}) {
           icon={mdiAccountGroup}
           label="Takip"
           tone="#7C3AED"
+          onPress={() => handleOpenConnections('following')}
           value={Number(profile?.followingCount || 0)}
         />
         <StatCard
@@ -376,16 +390,20 @@ function MetaPill({color = 'rgba(255,255,255,0.86)', icon, text}) {
   );
 }
 
-function StatCard({colors, icon, label, tone, value}) {
+function StatCard({colors, icon, label, onPress, tone, value}) {
   return (
-    <View
-      style={[
+    <Pressable
+      accessibilityRole={onPress ? 'button' : undefined}
+      disabled={!onPress}
+      onPress={onPress}
+      style={({pressed} = {}) => [
         styles.statCard,
         {
           backgroundColor: colors.surface,
           borderColor: colors.border,
           shadowColor: colors.shadow || '#0F172A',
         },
+        pressed && styles.pressed,
       ]}>
       <View style={[styles.statIcon, {backgroundColor: `${tone}12`}]}>
         <MdiIcon path={icon} size={24} color={tone} />
@@ -394,7 +412,7 @@ function StatCard({colors, icon, label, tone, value}) {
         <Text style={[styles.statValue, {color: colors.text}]}>{value}</Text>
         <Text style={[styles.statLabel, {color: colors.mutedText}]}>{label}</Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 

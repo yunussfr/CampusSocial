@@ -1,6 +1,7 @@
-import React, {useEffect, useMemo} from 'react';
+import React, {useEffect, useMemo, useRef} from 'react';
 import {
   ActivityIndicator,
+  Animated,
   Image,
   Pressable,
   StyleSheet,
@@ -26,6 +27,7 @@ import {
   mdiAccountGroup,
   mdiAccountGroupOutline,
   mdiAccountOutline,
+  mdiBellOutline,
   mdiCompass,
   mdiCompassOutline,
   mdiHub,
@@ -37,7 +39,7 @@ import {
 } from '@mdi/js';
 
 import {ROUTES} from '../constants/routes';
-import {ICONS, IMAGES} from '../constants/assets';
+import {IMAGES} from '../constants/assets';
 
 import {useAuth} from '../context/AuthContext';
 import {useChats} from '../context/ChatContext';
@@ -73,6 +75,7 @@ import {MarketHomeScreen} from '../screens/market/MarketHomeScreen';
 import {MyListingsScreen} from '../screens/market/MyListingsScreen';
 
 import {EditProfileScreen} from '../screens/profile/EditProfileScreen';
+import {FollowConnectionsScreen} from '../screens/profile/FollowConnectionsScreen';
 import {ProfileScreen} from '../screens/profile/ProfileScreen';
 import {UserProfileScreen} from '../screens/profile/UserProfileScreen';
 
@@ -123,6 +126,10 @@ const TAB_ICONS = {
 
 const HIDDEN_TAB_SCREENS = [
   ROUTES.CHAT_DETAIL,
+  ROUTES.CREATE_EVENT,
+  ROUTES.CREATE_COMMUNITY,
+  ROUTES.CREATE_LISTING,
+  ROUTES.EDIT_PROFILE,
 ];
 
 const TAB_INITIAL_ROUTES = {
@@ -140,8 +147,9 @@ function createTabResetListeners(initialRouteName) {
       event.preventDefault();
 
       const nestedStackKey = route.state?.key;
+      const nestedRouteCount = route.state?.routes?.length || 0;
 
-      if (nestedStackKey) {
+      if (nestedStackKey && nestedRouteCount > 1) {
         navigation.dispatch({
           ...StackActions.popToTop(),
           target: nestedStackKey,
@@ -267,6 +275,7 @@ function EventsNavigator() {
         name={ROUTES.CREATE_EVENT}
         component={CreateEventScreen}
         options={{
+          headerShown: false,
           title: 'Etkinlik Oluştur',
         }}
       />
@@ -299,16 +308,33 @@ function CommunitiesNavigator() {
       <CommunitiesStack.Screen
         name={ROUTES.COMMUNITY_DETAIL}
         component={CommunityDetailScreen}
+        options={{
+          headerShown: false,
+        }}
       />
 
       <CommunitiesStack.Screen
         name={ROUTES.CREATE_COMMUNITY}
         component={CreateCommunityScreen}
+        options={{
+          headerShown: false,
+        }}
       />
 
       <CommunitiesStack.Screen
         name={ROUTES.POST_DETAIL}
         component={PostDetailScreen}
+        options={{
+          headerShown: false,
+        }}
+      />
+
+      <CommunitiesStack.Screen
+        name={ROUTES.NOTIFICATIONS}
+        component={NotificationsScreen}
+        options={{
+          title: 'Bildirimler',
+        }}
       />
     </CommunitiesStack.Navigator>
   );
@@ -435,6 +461,7 @@ function ProfileNavigator() {
         name={ROUTES.EDIT_PROFILE}
         component={EditProfileScreen}
         options={{
+          headerShown: false,
           title: 'Profili Düzenle',
         }}
       />
@@ -444,6 +471,13 @@ function ProfileNavigator() {
         component={UserProfileScreen}
         options={{
           title: 'Kullanıcı Profili',
+        }}
+      />
+      <ProfileStack.Screen
+        name={ROUTES.FOLLOW_CONNECTIONS}
+        component={FollowConnectionsScreen}
+        options={{
+          title: 'Takipler',
         }}
       />
       <ProfileStack.Screen
@@ -458,7 +492,7 @@ function ProfileNavigator() {
 }
 
 function MainTabs() {
-  const {chats, startChatsListener} = useChats();
+  const {chats, notifications, startChatsListener, startNotificationsListener} = useChats();
   const {theme} = useTheme();
   const {user} = useAuth();
 
@@ -470,6 +504,14 @@ function MainTabs() {
     return startChatsListener(user.uid);
   }, [startChatsListener, user?.uid]);
 
+  useEffect(() => {
+    if (!user?.uid) {
+      return undefined;
+    }
+
+    return startNotificationsListener(user.uid);
+  }, [startNotificationsListener, user?.uid]);
+
   const unreadChatCount = useMemo(() => {
     if (!user?.uid) {
       return 0;
@@ -479,6 +521,11 @@ function MainTabs() {
       return total + Number(chat.unreadCounts?.[user.uid] || 0);
     }, 0);
   }, [chats, user?.uid]);
+
+  const hasUnreadNotifications = useMemo(
+    () => notifications.some(item => item.read !== true),
+    [notifications],
+  );
 
   return (
     <Tab.Navigator
@@ -502,24 +549,35 @@ function MainTabs() {
             focused,
             color,
             size,
-          }) => (
-            <View
-              style={[
-                styles.tabIconWrap,
-                focused &&
-                  styles.tabIconWrapActive,
-              ]}>
-              <MdiIcon
-                path={
-                  focused
-                    ? selectedIcons.active
-                    : selectedIcons.inactive
-                }
-                color={color}
-                size={focused ? size + 1 : size}
-              />
-            </View>
-          ),
+          }) => {
+            const chatBadgeCount =
+              route.name === 'ChatTab' ? unreadChatCount : 0;
+            const showProfileBadge =
+              route.name === 'ProfileTab' && hasUnreadNotifications;
+
+            return (
+              <View
+                style={[
+                  styles.tabIconWrap,
+                  focused &&
+                    styles.tabIconWrapActive,
+                ]}>
+                <MdiIcon
+                  path={
+                    focused
+                      ? selectedIcons.active
+                      : selectedIcons.inactive
+                  }
+                  color={color}
+                  size={focused ? size + 1 : size}
+                />
+                {chatBadgeCount > 0 ? (
+                  <PulseBadge count={chatBadgeCount} />
+                ) : null}
+                {showProfileBadge ? <PulseBadge dot /> : null}
+              </View>
+            );
+          },
 
           tabBarStyle: shouldHideTabBar
             ? {display: 'none'}
@@ -578,11 +636,6 @@ function MainTabs() {
         component={ChatNavigator}
         listeners={createTabResetListeners(TAB_INITIAL_ROUTES.ChatTab)}
         options={{
-          tabBarBadge:
-            unreadChatCount > 0
-              ? unreadChatCount
-              : undefined,
-          tabBarBadgeStyle: styles.tabBadge,
           title: 'Messages',
         }}
       />
@@ -596,6 +649,43 @@ function MainTabs() {
         }}
       />
     </Tab.Navigator>
+  );
+}
+
+function PulseBadge({count, dot = false}) {
+  const pulse = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1.18,
+          duration: 520,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 520,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    animation.start();
+
+    return () => animation.stop();
+  }, [pulse]);
+
+  return (
+    <Animated.View
+      style={[
+        dot ? styles.pulseDot : styles.pulseBadge,
+        {transform: [{scale: pulse}]},
+      ]}>
+      {!dot ? (
+        <Text style={styles.pulseBadgeText}>{count > 99 ? '99+' : count}</Text>
+      ) : null}
+    </Animated.View>
   );
 }
 
@@ -651,7 +741,7 @@ function useStackOptions() {
           : () => (
               <IconButton
                 accessibilityLabel="Bildirimler"
-                icon={ICONS.bell}
+                icon={mdiBellOutline}
                 onPress={() =>
                   navigation.navigate(
                     ROUTES.NOTIFICATIONS,
@@ -709,16 +799,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  tabBadge: {
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: '#DC2626',
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '900',
-  },
-
   tabIconWrap: {
     width: 40,
     height: 32,
@@ -732,6 +812,40 @@ const styles = StyleSheet.create({
 
   tabIconWrapActive: {
     backgroundColor: '#FEF3C7',
+  },
+
+  pulseBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -3,
+    minWidth: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    borderRadius: 9,
+    backgroundColor: '#DC2626',
+  },
+
+  pulseBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: '900',
+  },
+
+  pulseDot: {
+    position: 'absolute',
+    top: 0,
+    right: 4,
+    width: 9,
+    height: 9,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    borderRadius: 5,
+    backgroundColor: '#DC2626',
   },
 
   headerBell: {

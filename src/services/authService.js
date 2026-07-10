@@ -149,7 +149,7 @@ export async function deleteCurrentUserAccount(uid) {
   const currentUser = firebaseAuth.currentUser;
 
   if (!currentUser) {
-    throw new Error('Oturum bulunamadi.');
+    throw new Error('Oturum bulunamadı.');
   }
 
   const userRef = firestoreDb.collection(COLLECTIONS.USERS).doc(uid);
@@ -203,6 +203,70 @@ export async function unfollowUser(currentUserId, targetUserId) {
     .delete();
 }
 
+async function getUserProfilesByIds(userIds) {
+  const uniqueIds = Array.from(new Set(userIds.filter(Boolean)));
+
+  const profileDocs = await Promise.all(
+    uniqueIds.map(userId =>
+      firestoreDb.collection(COLLECTIONS.USERS).doc(userId).get(),
+    ),
+  );
+
+  return profileDocs
+    .filter(profileDoc => profileDoc.exists)
+    .map(profileDoc => ({
+      id: profileDoc.id,
+      ...profileDoc.data(),
+    }));
+}
+
+export function subscribeToFollowing(userId, onChanged, onError) {
+  return firestoreDb
+    .collection(COLLECTIONS.USERS)
+    .doc(userId)
+    .collection(COLLECTIONS.FOLLOWS)
+    .orderBy('followedAt', 'desc')
+    .onSnapshot(async snapshot => {
+      try {
+        const userIds = snapshot.docs.map(
+          followDoc => followDoc.data()?.targetUserId || followDoc.id,
+        );
+
+        const profiles = await getUserProfilesByIds(userIds);
+        const profileById = new Map(
+          profiles.map(profile => [profile.uid || profile.id, profile]),
+        );
+
+        onChanged(userIds.map(id => profileById.get(id)).filter(Boolean));
+      } catch (error) {
+        onError?.(error);
+      }
+    }, onError);
+}
+
+export function subscribeToFollowers(userId, onChanged, onError) {
+  return firestoreDb
+    .collectionGroup(COLLECTIONS.FOLLOWS)
+    .where('targetUserId', '==', userId)
+    .orderBy('followedAt', 'desc')
+    .onSnapshot(async snapshot => {
+      try {
+        const userIds = snapshot.docs
+          .map(followDoc => followDoc.ref.parent.parent?.id)
+          .filter(Boolean);
+
+        const profiles = await getUserProfilesByIds(userIds);
+        const profileById = new Map(
+          profiles.map(profile => [profile.uid || profile.id, profile]),
+        );
+
+        onChanged(userIds.map(id => profileById.get(id)).filter(Boolean));
+      } catch (error) {
+        onError?.(error);
+      }
+    }, onError);
+}
+
 export async function setUserFcmToken(uid, fcmToken) {
   return firestoreDb.collection(COLLECTIONS.USERS).doc(uid).set(
     {
@@ -230,7 +294,7 @@ export async function requestAndSaveFcmToken(uid) {
     : null;
 
   if (!token) {
-    throw new Error('Bildirim tokeni alinamadi.');
+    throw new Error('Bildirim tokeni alınamadı.');
   }
 
   await setUserFcmToken(uid, token);

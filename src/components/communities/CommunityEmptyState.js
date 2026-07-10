@@ -12,28 +12,28 @@ import {MdiIcon} from '../ui/MdiIcon';
 const STATE_COPY = {
   empty: {
     icon: mdiViewGridPlusOutline,
-    title: 'Henuz topluluk yok.',
-    description: 'Ilk kampus toplulugunu olusturarak baslayabilirsin.',
+    title: 'Henüz topluluk yok.',
+    description: 'İlk kampüs topluluğunu oluşturarak başlayabilirsin.',
   },
   search: {
     icon: mdiMagnify,
-    title: 'Aramanla eslesen topluluk bulunamadi.',
-    description: 'Farkli bir kelime veya kategori deneyebilirsin.',
+    title: 'Aramanla eşleşen topluluk bulunamadı.',
+    description: 'Farklı bir kelime veya kategori deneyebilirsin.',
   },
   filter: {
     icon: mdiFilterOffOutline,
-    title: 'Sectigin filtrelere uygun topluluk bulunamadi.',
+    title: 'Seçtiğin filtrelere uygun topluluk bulunamadı.',
     description: 'Filtreleri temizleyerek tekrar dene.',
   },
   error: {
     icon: mdiAlertCircleOutline,
-    title: 'Topluluklar yuklenemedi.',
-    description: 'Baglanti veya yetki durumunu kontrol et.',
+    title: 'Topluluklar yüklenemedi.',
+    description: 'Bağlantı veya yetki durumunu kontrol et.',
   },
   recommendation: {
     icon: mdiStarOutline,
-    title: 'Onerilen topluluk bulunamadi.',
-    description: 'Yeni topluluklar eklendikce burada gorunecek.',
+    title: 'Önerilen topluluk bulunamadı.',
+    description: 'Yeni topluluklar eklendikçe burada görünecek.',
   },
 };
 
