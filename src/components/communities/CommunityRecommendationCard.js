@@ -28,7 +28,7 @@ export const CommunityRecommendationCard = React.memo(function CommunityRecommen
 }) {
   const category = getCommunityCategory(community);
   const privateCommunity = getCommunityPrivacyLabel(community) === 'Ozel';
-  const buttonLabel = privateCommunity ? 'Incele' : isMember ? 'Ayril' : 'Katil';
+  const buttonLabel = privateCommunity ? 'İncele' : isMember ? 'Ayrıl' : 'Katıl';
 
   return (
     <Pressable
@@ -51,7 +51,7 @@ export const CommunityRecommendationCard = React.memo(function CommunityRecommen
         />
         <View style={styles.recommendedBadge}>
           <MdiIcon path={mdiStar} size={16} color="#FDE047" />
-          <Text style={styles.recommendedText}>Onerilen</Text>
+          <Text style={styles.recommendedText}>Önerilen</Text>
         </View>
         <View style={styles.categoryIcon}>
           <MdiIcon
@@ -85,7 +85,7 @@ export const CommunityRecommendationCard = React.memo(function CommunityRecommen
             <Text
               numberOfLines={1}
               style={[styles.categoryText, {color: category?.color || theme.colors.primary}]}>
-              {category?.label || community?.category || 'Diger'}
+              {category?.label || community?.category || 'Diğer'}
             </Text>
           </View>
           <View style={styles.memberMeta}>
@@ -111,7 +111,7 @@ export const CommunityRecommendationCard = React.memo(function CommunityRecommen
                 : [category?.color || theme.colors.primary, theme.colors.accent]
             }
             style={[styles.button, isJoining && styles.disabledButton]}>
-            <Text style={styles.buttonText}>{isJoining ? 'Isleniyor...' : buttonLabel}</Text>
+            <Text style={styles.buttonText}>{isJoining ? 'İşleniyor...' : buttonLabel}</Text>
           </LinearGradient>
         </Pressable>
       </View>

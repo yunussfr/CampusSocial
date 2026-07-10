@@ -1,4 +1,5 @@
 import app from '@react-native-firebase/app';
+import analytics from '@react-native-firebase/analytics';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import messaging from '@react-native-firebase/messaging';
@@ -10,7 +11,7 @@ export const firebaseServices = {
   db: firestore(),
   storage: storage(),
   functions: null,
-  analytics: null,
+  analytics: analytics(),
   messaging: messaging(),
 };
 
@@ -18,4 +19,5 @@ export const firebaseApp = firebaseServices.app;
 export const firebaseAuth = firebaseServices.auth;
 export const firestoreDb = firebaseServices.db;
 export const firebaseStorage = firebaseServices.storage;
+export const firebaseAnalytics = firebaseServices.analytics;
 export const firebaseMessaging = firebaseServices.messaging;

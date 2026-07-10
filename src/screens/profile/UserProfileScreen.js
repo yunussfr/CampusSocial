@@ -59,15 +59,22 @@ function formatStat(value) {
   return String(value);
 }
 
-function StatItem({ icon, label, value }) {
+function StatItem({ icon, label, onPress, value }) {
   return (
-    <View style={styles.statItem}>
+    <Pressable
+      accessibilityRole={onPress ? 'button' : undefined}
+      disabled={!onPress}
+      onPress={onPress}
+      style={({pressed}) => [
+        styles.statItem,
+        pressed && styles.buttonPressed,
+      ]}>
       <View style={styles.statIconWrap}>
         <Text style={styles.statIcon}>{icon}</Text>
       </View>
       <Text style={styles.statValue}>{formatStat(value)}</Text>
       <Text style={styles.statLabel}>{label}</Text>
-    </View>
+    </Pressable>
   );
 }
 
@@ -267,6 +274,18 @@ export function UserProfileScreen({ route, navigation }) {
     }
   }
 
+  function handleOpenConnections(initialTab) {
+    if (!userId) {
+      return;
+    }
+
+    navigation.navigate(ROUTES.FOLLOW_CONNECTIONS, {
+      userId,
+      initialTab,
+      titleName: displayName,
+    });
+  }
+
   const followButtonText = saving
     ? 'İşleniyor...'
     : following
@@ -359,12 +378,14 @@ export function UserProfileScreen({ route, navigation }) {
           <StatItem
             icon="👥"
             label="Takipçi"
+            onPress={() => handleOpenConnections('followers')}
             value={userProfile?.followersCount || 0}
           />
           <View style={styles.statDivider} />
           <StatItem
             icon="○"
             label="Takip"
+            onPress={() => handleOpenConnections('following')}
             value={userProfile?.followingCount || 0}
           />
           <View style={styles.statDivider} />

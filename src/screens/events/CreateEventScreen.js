@@ -1,6 +1,7 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
-import React, { useState } from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {
+  Animated,
   Image,
   Platform,
   Pressable,
@@ -10,7 +11,16 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import MapView, {Marker} from 'react-native-maps';
+import {mdiArrowLeft} from '@mdi/js';
+import {launchImageLibrary} from 'react-native-image-picker';
+
+import {MdiIcon} from '../../components/ui/MdiIcon';
+import {useAnalytics} from '../../context/AnalyticsContext';
+import {useAuth} from '../../context/AuthContext';
+import {useEvents} from '../../context/EventContext';
+import {uploadEventCover} from '../../services/storageService';
+import {ANALYTICS_EVENTS} from '../../services/analyticsService';
 
 const EVENT_CATEGORIES = [
   'Akademik',
@@ -27,10 +37,6 @@ const EVENT_CATEGORIES = [
   'Topluluk Etkinliği',
   'Diğer',
 ];
-import { launchImageLibrary } from 'react-native-image-picker';
-import { useAuth } from '../../context/AuthContext';
-import { useEvents } from '../../context/EventContext';
-import { uploadEventCover } from '../../services/storageService';
 
 const DEFAULT_REGION = {
   latitude: 41.0082,
@@ -39,9 +45,14 @@ const DEFAULT_REGION = {
   longitudeDelta: 0.04,
 };
 
-export function CreateEventScreen({ navigation }) {
-  const { profile, user } = useAuth();
-  const { addEvent, setEventCover } = useEvents();
+const STEPS = ['Bilgiler', 'Zaman ve Konum', 'Yayın'];
+
+export function CreateEventScreen({navigation}) {
+  const stepMotion = useMemo(() => new Animated.Value(1), []);
+  const {logEvent} = useAnalytics();
+  const {profile, user} = useAuth();
+  const {addEvent, setEventCover} = useEvents();
+  const [activeStep, setActiveStep] = useState(0);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
@@ -65,6 +76,20 @@ export function CreateEventScreen({ navigation }) {
   const [coverAsset, setCoverAsset] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    stepMotion.setValue(0);
+    Animated.timing(stepMotion, {
+      toValue: 1,
+      duration: 260,
+      useNativeDriver: true,
+    }).start();
+  }, [activeStep, stepMotion]);
+
+  function goToStep(step) {
+    setError(null);
+    setActiveStep(Math.max(0, Math.min(STEPS.length - 1, step)));
+  }
 
   async function handlePickCover() {
     const result = await launchImageLibrary({
@@ -91,13 +116,15 @@ export function CreateEventScreen({ navigation }) {
 
     if (!location) {
       setSubmitting(false);
-      setError('Lutfen haritadan etkinlik konumu sec.');
+      setError('Lütfen haritadan etkinlik konumu seç.');
+      goToStep(1);
       return;
     }
 
     if (endDate <= startDate) {
       setSubmitting(false);
-      setError('Bitis tarihi baslangic tarihinden sonra olmali.');
+      setError('Bitiş tarihi başlangıç tarihinden sonra olmalı.');
+      goToStep(1);
       return;
     }
 
@@ -128,6 +155,10 @@ export function CreateEventScreen({ navigation }) {
         await setEventCover(eventId, coverURL);
       }
 
+      logEvent(ANALYTICS_EVENTS.EVENT_CREATE_SUCCESS, {
+        event_id: eventId,
+        category,
+      });
       navigation.goBack();
     } catch (submitError) {
       setError(submitError.message);
@@ -170,174 +201,217 @@ export function CreateEventScreen({ navigation }) {
   }
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.container}
-      keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>Etkinlik Olustur</Text>
-      <Text style={styles.subtitle}>Temel etkinlik bilgilerini ekle.</Text>
-      <TextInput
-        autoCorrect={false}
-        onChangeText={setTitle}
-        placeholder="Baslik"
-        spellCheck={false}
-        style={styles.input}
-        value={title}
-      />
-      <TextInput
-        multiline
-        autoCorrect={false}
-        onChangeText={setDescription}
-        placeholder="Aciklama"
-        spellCheck={false}
-        style={[styles.input, styles.multilineInput]}
-        value={description}
-      />
-      <Pressable
-        onPress={() => setShowCategories(prev => !prev)}
-        style={[styles.input, styles.categorySelector]}>
-        <Text style={[
-          styles.categorySelectorText,
-          !category && styles.categoryPlaceholder,
-        ]}>
-          {category || 'Kategori seç'}
-        </Text>
-        <Text style={styles.categoryArrow}>
-          {showCategories ? '▲' : '▼'}
-        </Text>
-      </Pressable>
-      {showCategories ? (
-        <View style={styles.categoryDropdown}>
-          {EVENT_CATEGORIES.map(cat => (
-            <Pressable
-              key={cat}
-              onPress={() => {
-                setCategory(cat);
-                setShowCategories(false);
-              }}
-              style={[
-                styles.categoryOption,
-                category === cat && styles.categoryOptionActive,
-              ]}>
-              <Text style={[
-                styles.categoryOptionText,
-                category === cat && styles.categoryOptionTextActive,
-              ]}>
-                {cat}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      ) : null}
-      <View style={styles.dateSection}>
+    <View style={styles.root}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled">
         <Pressable
-          onPress={() =>
-            setActivePicker({
-              target: 'start',
-              mode: 'date',
-            })
-          }
-          style={styles.dateButton}>
-          <Text style={styles.dateLabel}>Baslangic tarihi</Text>
-          <Text style={styles.dateValue}>{formatDate(startDate)}</Text>
+          accessibilityRole="button"
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}>
+          <MdiIcon path={mdiArrowLeft} size={24} color="#0B1C30" />
         </Pressable>
+        <Text style={styles.title}>Etkinlik Oluştur</Text>
+        <Text style={styles.subtitle}>Temel etkinlik bilgilerini ekle.</Text>
+        <StepIndicator activeStep={activeStep} />
 
-        <Pressable
-          onPress={() =>
-            setActivePicker({
-              target: 'start',
-              mode: 'time',
-            })
-          }
-          style={styles.dateButton}>
-          <Text style={styles.dateLabel}>Baslangic saati</Text>
-          <Text style={styles.dateValue}>{formatTime(startDate)}</Text>
-        </Pressable>
+        <Animated.View
+          style={[
+            styles.stepBody,
+            {
+              opacity: stepMotion,
+              transform: [
+                {
+                  translateX: stepMotion.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [18, 0],
+                  }),
+                },
+              ],
+            },
+          ]}>
+          {activeStep === 0 ? renderInfoStep() : null}
+          {activeStep === 1 ? renderTimeLocationStep() : null}
+          {activeStep === 2 ? renderPublishStep() : null}
+        </Animated.View>
 
-        <Pressable
-          onPress={() =>
-            setActivePicker({
-              target: 'end',
-              mode: 'date',
-            })
-          }
-          style={styles.dateButton}>
-          <Text style={styles.dateLabel}>Bitis tarihi</Text>
-          <Text style={styles.dateValue}>{formatDate(endDate)}</Text>
-        </Pressable>
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+      </ScrollView>
 
+      <View style={styles.footer}>
+        {activeStep > 0 ? (
+          <Pressable onPress={() => goToStep(activeStep - 1)} style={styles.secondaryFooterButton}>
+            <Text style={styles.secondaryFooterText}>Geri</Text>
+          </Pressable>
+        ) : null}
         <Pressable
-          onPress={() =>
-            setActivePicker({
-              target: 'end',
-              mode: 'time',
-            })
-          }
-          style={styles.dateButton}>
-          <Text style={styles.dateLabel}>Bitis saati</Text>
-          <Text style={styles.dateValue}>{formatTime(endDate)}</Text>
+          disabled={submitting}
+          onPress={activeStep === STEPS.length - 1 ? handleSubmit : () => goToStep(activeStep + 1)}
+          style={styles.primaryFooterButton}>
+          <Text style={styles.primaryButtonText}>
+            {activeStep === STEPS.length - 1
+              ? submitting
+                ? 'Kaydediliyor...'
+                : 'Etkinliği Kaydet'
+              : 'Devam Et'}
+          </Text>
         </Pressable>
       </View>
+    </View>
+  );
 
-      {activePicker ? (
-        <DateTimePicker
-          value={activePicker.target === 'start' ? startDate : endDate}
-          mode={activePicker.mode}
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          minimumDate={activePicker.target === 'end' ? startDate : undefined}
-          onChange={handleDateChange}
+  function renderInfoStep() {
+    return (
+      <>
+        <TextInput
+          autoCorrect={false}
+          onChangeText={setTitle}
+          placeholder="Başlık"
+          spellCheck={false}
+          style={styles.input}
+          value={title}
         />
-      ) : null}
+        <TextInput
+          multiline
+          autoCorrect={false}
+          onChangeText={setDescription}
+          placeholder="Açıklama"
+          spellCheck={false}
+          style={[styles.input, styles.multilineInput]}
+          value={description}
+        />
+        <Pressable
+          onPress={() => setShowCategories(prev => !prev)}
+          style={[styles.input, styles.categorySelector]}>
+          <Text
+            style={[
+              styles.categorySelectorText,
+              !category && styles.categoryPlaceholder,
+            ]}>
+            {category || 'Kategori seç'}
+          </Text>
+          <Text style={styles.categoryArrow}>
+            {showCategories ? '▲' : '▼'}
+          </Text>
+        </Pressable>
+        {showCategories ? (
+          <View style={styles.categoryDropdown}>
+            {EVENT_CATEGORIES.map(cat => (
+              <Pressable
+                key={cat}
+                onPress={() => {
+                  setCategory(cat);
+                  setShowCategories(false);
+                }}
+                style={[
+                  styles.categoryOption,
+                  category === cat && styles.categoryOptionActive,
+                ]}>
+                <Text
+                  style={[
+                    styles.categoryOptionText,
+                    category === cat && styles.categoryOptionTextActive,
+                  ]}>
+                  {cat}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+      </>
+    );
+  }
 
-      <View style={styles.mapSection}>
-        <Text style={styles.mapTitle}>Konumu haritadan sec</Text>
-        <Text style={styles.mapSubtitle}>
-          Etkinlik konumu elle yazilmaz. Haritada etkinligin yapilacagi noktaya dokun.
-        </Text>
+  function renderTimeLocationStep() {
+    return (
+      <>
+        <View style={styles.dateSection}>
+          <DateButton label="Başlangıç tarihi" value={formatDate(startDate)} onPress={() => setActivePicker({target: 'start', mode: 'date'})} />
+          <DateButton label="Başlangıç saati" value={formatTime(startDate)} onPress={() => setActivePicker({target: 'start', mode: 'time'})} />
+          <DateButton label="Bitiş tarihi" value={formatDate(endDate)} onPress={() => setActivePicker({target: 'end', mode: 'date'})} />
+          <DateButton label="Bitiş saati" value={formatTime(endDate)} onPress={() => setActivePicker({target: 'end', mode: 'time'})} />
+        </View>
 
-        <MapView
-          initialRegion={DEFAULT_REGION}
-          region={mapRegion}
-          onPress={handleMapPress}
-          onRegionChangeComplete={setMapRegion}
-          style={styles.map}>
-          {location ? (
-            <Marker coordinate={location} />
-          ) : null}
-        </MapView>
+        {activePicker ? (
+          <DateTimePicker
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            minimumDate={activePicker.target === 'end' ? startDate : undefined}
+            mode={activePicker.mode}
+            onChange={handleDateChange}
+            value={activePicker.target === 'start' ? startDate : endDate}
+          />
+        ) : null}
 
-        <Text style={styles.selectedLocation}>
-          {location
-            ? `Secilen konum: ${formatCoordinate(location)}`
-            : 'Henuz konum secilmedi.'}
-        </Text>
-      </View>
+        <View style={styles.mapSection}>
+          <Text style={styles.mapTitle}>Konumu haritadan seç</Text>
+          <Text style={styles.mapSubtitle}>
+            Etkinlik konumu elle yazılmaz. Haritada etkinliğin yapılacağı noktaya dokun.
+          </Text>
+          <MapView
+            initialRegion={DEFAULT_REGION}
+            onPress={handleMapPress}
+            onRegionChangeComplete={setMapRegion}
+            region={mapRegion}
+            style={styles.map}>
+            {location ? <Marker coordinate={location} /> : null}
+          </MapView>
+          <Text style={styles.selectedLocation}>
+            {location
+              ? `Seçilen konum: ${formatCoordinate(location)}`
+              : 'Henüz konum seçilmedi.'}
+          </Text>
+        </View>
+      </>
+    );
+  }
 
-      <TextInput
-        keyboardType="number-pad"
-        onChangeText={setCapacity}
-        placeholder="Kapasite"
-        style={styles.input}
-        value={capacity}
-      />
-      <Pressable onPress={handlePickCover} style={styles.secondaryButton}>
-        <Text style={styles.secondaryButtonText}>
-          {coverAsset ? 'Cover degistir' : 'Cover sec'}
-        </Text>
-      </Pressable>
-      {coverAsset?.uri ? (
-        <Image source={{ uri: coverAsset.uri }} style={styles.coverPreview} />
-      ) : null}
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Pressable
-        disabled={submitting}
-        onPress={handleSubmit}
-        style={styles.primaryButton}>
-        <Text style={styles.primaryButtonText}>
-          {submitting ? 'Kaydediliyor...' : 'Etkinligi Kaydet'}
-        </Text>
-      </Pressable>
-      <Text style={styles.note}>Cover gorseli Storage'a yuklenir.</Text>
-    </ScrollView>
+  function renderPublishStep() {
+    return (
+      <>
+        <TextInput
+          keyboardType="number-pad"
+          onChangeText={setCapacity}
+          placeholder="Kapasite"
+          style={styles.input}
+          value={capacity}
+        />
+        <Pressable onPress={handlePickCover} style={styles.secondaryButton}>
+          <Text style={styles.secondaryButtonText}>
+            {coverAsset ? 'Cover değiştir' : 'Cover seç'}
+          </Text>
+        </Pressable>
+        {coverAsset?.uri ? (
+          <Image source={{uri: coverAsset.uri}} style={styles.coverPreview} />
+        ) : null}
+        <Text style={styles.note}>Cover görseli Storage'a yüklenir.</Text>
+      </>
+    );
+  }
+}
+
+function StepIndicator({activeStep}) {
+  return (
+    <View style={styles.stepRow}>
+      {STEPS.map((step, index) => {
+        const active = index === activeStep;
+        return (
+          <View key={step} style={[styles.stepPill, active && styles.stepPillActive]}>
+            <Text style={[styles.stepText, active && styles.stepTextActive]}>
+              {index + 1}. {step}
+            </Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function DateButton({label, onPress, value}) {
+  return (
+    <Pressable onPress={onPress} style={styles.dateButton}>
+      <Text style={styles.dateLabel}>{label}</Text>
+      <Text style={styles.dateValue}>{value}</Text>
+    </Pressable>
   );
 }
 
@@ -361,10 +435,22 @@ function formatCoordinate(coordinate) {
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
   container: {
     gap: 12,
     padding: 24,
-    backgroundColor: '#F8FAFC',
+    paddingBottom: 118,
+  },
+  backButton: {
+    width: 42,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 21,
+    backgroundColor: '#FFFFFF',
   },
   title: {
     color: '#0B1C30',
@@ -375,6 +461,33 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontSize: 15,
     marginBottom: 12,
+  },
+  stepRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 6,
+  },
+  stepPill: {
+    minHeight: 34,
+    justifyContent: 'center',
+    paddingHorizontal: 11,
+    borderRadius: 17,
+    backgroundColor: '#E2E8F0',
+  },
+  stepPillActive: {
+    backgroundColor: '#004AC6',
+  },
+  stepText: {
+    color: '#475569',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  stepTextActive: {
+    color: '#FFFFFF',
+  },
+  stepBody: {
+    gap: 12,
   },
   input: {
     minHeight: 48,
@@ -394,29 +507,45 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 14,
     minHeight: 48,
   },
   categorySelectorText: {
-    fontSize: 14,
-    color: '#0B1C30',
     flex: 1,
+    color: '#0B1C30',
+    fontSize: 14,
   },
   categoryPlaceholder: {
     color: '#94A3B8',
   },
   categoryArrow: {
-    fontSize: 11,
-    color: '#64748B',
     marginLeft: 8,
+    color: '#64748B',
+    fontSize: 11,
   },
   categoryDropdown: {
+    overflow: 'hidden',
+    marginTop: -8,
     borderWidth: 1,
     borderColor: '#CBD5E1',
     borderRadius: 10,
     backgroundColor: '#FFFFFF',
-    overflow: 'hidden',
-    marginTop: -8,
+  },
+  categoryOption: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  categoryOptionActive: {
+    backgroundColor: '#EEF4FF',
+  },
+  categoryOptionText: {
+    color: '#334155',
+    fontSize: 14,
+  },
+  categoryOptionTextActive: {
+    color: '#004AC6',
+    fontWeight: '700',
   },
   dateSection: {
     flexDirection: 'row',
@@ -468,30 +597,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
-  categoryOption: {
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  categoryOptionActive: {
-    backgroundColor: '#EEF4FF',
-  },
-  categoryOptionText: {
-    fontSize: 14,
-    color: '#334155',
-  },
-  categoryOptionTextActive: {
-    color: '#004AC6',
-    fontWeight: '700',
-  },
-  primaryButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-    borderRadius: 10,
-    backgroundColor: '#004AC6',
-  },
   secondaryButton: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -512,11 +617,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#E2E8F0',
   },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
-  },
   error: {
     color: '#DC2626',
     fontSize: 14,
@@ -525,5 +625,47 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontSize: 13,
     lineHeight: 18,
+  },
+  footer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+  },
+  secondaryFooterButton: {
+    flex: 1,
+    minHeight: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 13,
+    backgroundColor: '#FFFFFF',
+  },
+  secondaryFooterText: {
+    color: '#004AC6',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  primaryFooterButton: {
+    flex: 2,
+    minHeight: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 13,
+    backgroundColor: '#004AC6',
+  },
+  primaryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
   },
 });

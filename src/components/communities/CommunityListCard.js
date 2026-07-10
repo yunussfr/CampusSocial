@@ -28,7 +28,7 @@ export const CommunityListCard = React.memo(function CommunityListCard({
   const category = getCommunityCategory(community);
   const avatars = getCommunityMemberAvatars(community);
   const privateCommunity = getCommunityPrivacyLabel(community) === 'Ozel';
-  const buttonLabel = privateCommunity ? 'Incele' : isMember ? 'Ayril' : 'Katil';
+  const buttonLabel = privateCommunity ? 'İncele' : isMember ? 'Ayrıl' : 'Katıl';
 
   return (
     <Pressable
@@ -88,7 +88,7 @@ export const CommunityListCard = React.memo(function CommunityListCard({
           <Text
             numberOfLines={1}
             style={[styles.categoryText, {color: category?.color || theme.colors.primary}]}>
-            {category?.shortLabel || community?.category || 'Diger'}
+            {category?.shortLabel || community?.category || 'Diğer'}
           </Text>
         </View>
         {false ? <MdiIcon path={mdiDotsHorizontal} size={22} color={theme.colors.text} /> : null}

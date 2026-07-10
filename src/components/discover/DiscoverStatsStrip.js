@@ -18,16 +18,16 @@ export function DiscoverStatsStrip({
     {
       label: 'En Popüler',
       value: topCategory,
-      icon: '♪',
+      icon: '🔥',
       iconColor: '#F97316',
       bg: '#FFF1E8',
     },
     {
       label: 'Yakındaki Etkinlikler',
       value: nearbyEventCount,
-      icon: '⌖',
-      iconColor: '#16A34A',
-      bg: '#DCFCE7',
+      icon: '⏳',
+      iconColor: '#7C3AED',
+      bg: '#F3E8FF',
     },
   ];
 

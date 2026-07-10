@@ -14,8 +14,11 @@ import {
   createCommunityPost,
   joinCommunity,
   leaveCommunity,
+  requestCommunityJoin,
+  subscribeToCommunityJoinRequest,
   subscribeToCommunities,
   subscribeToCommunityPosts,
+  updateCommunityJoinRequestStatus,
   updateCommunityMedia,
 } from '../services/communityService';
 
@@ -56,9 +59,32 @@ export function CommunityProvider({ children }) {
     return joinCommunity(communityId, userId);
   }, []);
 
+  const requestSelectedCommunityJoin = useCallback(
+    async (communityId, requester) => {
+      return requestCommunityJoin(communityId, requester);
+    },
+    [],
+  );
+
   const leaveSelectedCommunity = useCallback(async (communityId, userId) => {
     return leaveCommunity(communityId, userId);
   }, []);
+
+  const reviewCommunityJoinRequest = useCallback(async input => {
+    return updateCommunityJoinRequestStatus(input);
+  }, []);
+
+  const startCommunityJoinRequestListener = useCallback(
+    ({communityId, userId, onData, onError}) => {
+      return subscribeToCommunityJoinRequest({
+        communityId,
+        userId,
+        onData,
+        onError,
+      });
+    },
+    [],
+  );
 
   const startCommunityPostsListener = useCallback(communityId => {
     return subscribeToCommunityPosts({
@@ -84,8 +110,11 @@ export function CommunityProvider({ children }) {
       dispatch,
       joinSelectedCommunity,
       leaveSelectedCommunity,
+      requestSelectedCommunityJoin,
+      reviewCommunityJoinRequest,
       selectCommunity,
       setCommunityMedia,
+      startCommunityJoinRequestListener,
       startCommunitiesListener,
       startCommunityPostsListener,
     }),
@@ -94,8 +123,11 @@ export function CommunityProvider({ children }) {
       addCommunityPost,
       joinSelectedCommunity,
       leaveSelectedCommunity,
+      requestSelectedCommunityJoin,
+      reviewCommunityJoinRequest,
       selectCommunity,
       setCommunityMedia,
+      startCommunityJoinRequestListener,
       startCommunitiesListener,
       startCommunityPostsListener,
       state,

@@ -47,7 +47,7 @@ export function getCommunityMemberCount(community) {
 }
 
 export function formatMemberCount(community) {
-  return `${new Intl.NumberFormat('tr-TR').format(getCommunityMemberCount(community))} uye`;
+  return `${new Intl.NumberFormat('tr-TR').format(getCommunityMemberCount(community))} üye`;
 }
 
 export function convertFirestoreDate(value) {
@@ -91,7 +91,7 @@ export function formatRelativeCommunityActivity(community) {
   }
 
   const days = Math.floor(diffMinutes / 1440);
-  return days < 1 ? 'Bugun aktif' : `${days} gun once aktif`;
+  return days < 1 ? 'Bugün aktif' : `${days} gün önce aktif`;
 }
 
 export function getCommunityImageSource(community, variant = 'cover') {
@@ -125,7 +125,7 @@ export function getCommunityName(community) {
 }
 
 export function getCommunityDescription(community) {
-  return community?.description || 'Topluluk aciklamasi bulunmuyor.';
+  return community?.description || 'Topluluk açıklaması bulunmuyor.';
 }
 
 export function getCommunityCategory(community) {
@@ -177,4 +177,103 @@ export function getCommunityPrivacyLabel(community) {
   }
 
   return 'Acik';
+}
+
+export function getCommunityPrivacyDisplayLabel(community) {
+  return getCommunityPrivacyLabel(community) === 'Ozel'
+    ? 'Özel Topluluk'
+    : 'Açık Topluluk';
+}
+
+export function getCommunityRules(community) {
+  return Array.isArray(community?.rules)
+    ? community.rules.filter(Boolean)
+    : [];
+}
+
+export function getCommunityTags(community) {
+  return Array.isArray(community?.tags)
+    ? community.tags.filter(Boolean)
+    : [];
+}
+
+export function getCommunityDetailedMembers(community) {
+  if (!Array.isArray(community?.members)) {
+    return [];
+  }
+
+  return community.members
+    .filter(member => member && typeof member === 'object')
+    .filter(member => member.displayName || member.photoURL || member.avatarURL || member.uid || member.userId);
+}
+
+export function formatCommunityCreatedAt(community) {
+  const date = convertFirestoreDate(community?.createdAt);
+
+  if (!date) {
+    return 'Belirtilmedi';
+  }
+
+  return new Intl.DateTimeFormat('tr-TR', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  }).format(date);
+}
+
+export function getPostAuthorName(post) {
+  return post?.author?.displayName || post?.authorName || 'Anonim';
+}
+
+export function getPostAuthorPhotoSource(post) {
+  const candidate = post?.author?.photoURL || post?.author?.avatarURL || post?.authorPhotoURL;
+
+  if (typeof candidate === 'string' && candidate.trim()) {
+    return {uri: candidate};
+  }
+
+  return IMAGES.profileManPlaceholder;
+}
+
+export function getPostImages(post) {
+  if (Array.isArray(post?.imageURLs)) {
+    return post.imageURLs.filter(Boolean);
+  }
+
+  if (post?.imageURL) {
+    return [post.imageURL];
+  }
+
+  return [];
+}
+
+export function getPostCreatedAtText(post) {
+  const date = convertFirestoreDate(post?.createdAt || post?.updatedAt);
+
+  if (!date) {
+    return 'Yeni';
+  }
+
+  const diffMinutes = Math.floor(Math.max(0, Date.now() - date.getTime()) / 60000);
+
+  if (diffMinutes < 1) {
+    return 'Şimdi';
+  }
+
+  if (diffMinutes < 60) {
+    return `${diffMinutes} dakika önce`;
+  }
+
+  const diffHours = Math.floor(diffMinutes / 60);
+
+  if (diffHours < 24) {
+    return `${diffHours} saat önce`;
+  }
+
+  return new Intl.DateTimeFormat('tr-TR', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
 }

@@ -20,6 +20,7 @@ export const ROUTES = {
   PROFILE: 'Profile',
   EDIT_PROFILE: 'EditProfile',
   USER_PROFILE: 'UserProfile',
+  FOLLOW_CONNECTIONS: 'FollowConnections',
   SETTINGS: 'Settings',
   SAVED_ITEMS: 'SavedItems',
   NOTIFICATIONS: 'Notifications',

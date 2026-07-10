@@ -1,15 +1,19 @@
-import React, { useContext, useMemo, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useContext, useEffect, useMemo, useState } from 'react';
+import { Alert, Animated, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
 import MapView, { Marker } from 'react-native-maps';
 
 import { AppButton, Card, StateView } from '../../components/ui/DesignSystem';
 import { ICONS, IMAGES } from '../../constants/assets';
+import { useAnalytics } from '../../context/AnalyticsContext';
 import { useAuth } from '../../context/AuthContext';
 import { useEvents } from '../../context/EventContext';
 import { useTheme } from '../../context/ThemeContext';
+import { ANALYTICS_EVENTS } from '../../services/analyticsService';
 
 export function EventDetailScreen({ route }) {
+  const heroMotion = useMemo(() => new Animated.Value(0), []);
+  const { logEvent } = useAnalytics();
   const { user } = useAuth();
   const { theme } = useTheme();
 
@@ -17,6 +21,7 @@ export function EventDetailScreen({ route }) {
     useEvents();
 
   const [submitting, setSubmitting] = useState(false);
+  const [actionFeedback, setActionFeedback] = useState(null);
 
   const eventId = route.params?.eventId;
 
@@ -27,6 +32,27 @@ export function EventDetailScreen({ route }) {
     () => selectedEvent || events.find(item => item.id === eventId),
     [eventId, events, selectedEvent],
   );
+
+  useEffect(() => {
+    heroMotion.setValue(0);
+    Animated.timing(heroMotion, {
+      toValue: 1,
+      duration: 360,
+      useNativeDriver: true,
+    }).start();
+  }, [heroMotion, eventId]);
+
+  useEffect(() => {
+    if (!actionFeedback) {
+      return undefined;
+    }
+
+    const timeoutId = setTimeout(() => {
+      setActionFeedback(null);
+    }, 1800);
+
+    return () => clearTimeout(timeoutId);
+  }, [actionFeedback]);
 
   if (!event) {
     return (
@@ -43,9 +69,17 @@ export function EventDetailScreen({ route }) {
 
   async function handleJoin() {
     setSubmitting(true);
+    setActionFeedback(null);
 
     try {
       await joinSelectedEvent(event.id, user.uid);
+      logEvent(ANALYTICS_EVENTS.EVENT_JOIN, {
+        event_id: event.id,
+        category: event.category || '',
+      });
+      setActionFeedback('joined');
+    } catch (error) {
+      Alert.alert('Etkinliğe katılınamadı', error.message);
     } finally {
       setSubmitting(false);
     }
@@ -53,13 +87,24 @@ export function EventDetailScreen({ route }) {
 
   async function handleLeave() {
     setSubmitting(true);
+    setActionFeedback(null);
 
     try {
       await leaveSelectedEvent(event.id, user.uid);
+      logEvent(ANALYTICS_EVENTS.EVENT_LEAVE, {
+        event_id: event.id,
+        category: event.category || '',
+      });
+      setActionFeedback('left');
+    } catch (error) {
+      Alert.alert('Etkinlikten ayrılınamadı', error.message);
     } finally {
       setSubmitting(false);
     }
   }
+
+  const hasJoinedFeedback = actionFeedback === 'joined';
+  const hasLeftFeedback = actionFeedback === 'left';
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
@@ -81,10 +126,21 @@ export function EventDetailScreen({ route }) {
         nestedScrollEnabled={true}
         scrollEnabled={true}
       >
-        <View
+        <Animated.View
           style={[
             styles.hero,
             { backgroundColor: theme.colors.primarySoft },
+            {
+              opacity: heroMotion,
+              transform: [
+                {
+                  translateY: heroMotion.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [18, 0],
+                  }),
+                },
+              ],
+            },
           ]}
         >
           <Image
@@ -107,7 +163,7 @@ export function EventDetailScreen({ route }) {
               <Text style={styles.heroMeta}>{getEventLocationLabel(event)}</Text>
             </View>
           </View>
-        </View>
+        </Animated.View>
 
         <Card style={styles.card}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
@@ -176,18 +232,24 @@ export function EventDetailScreen({ route }) {
           <AppButton
             disabled={submitting}
             onPress={handleJoin}
-            style={styles.action}
+            style={[
+              styles.action,
+              hasJoinedFeedback && styles.joinedAction,
+            ]}
           >
-            Katıl
+            {hasJoinedFeedback ? "Hub'a eklendi" : 'Katıl'}
           </AppButton>
 
           <AppButton
             disabled={submitting}
             onPress={handleLeave}
-            style={styles.action}
-            variant="secondary"
+            style={[
+              styles.action,
+              hasLeftFeedback && styles.leftAction,
+            ]}
+            variant={hasLeftFeedback ? 'primary' : 'secondary'}
           >
-            Ayrıl
+            {hasLeftFeedback ? "Hub'dan çıkarıldı" : 'Ayrıl'}
           </AppButton>
         </View>
       </ScrollView>
@@ -409,5 +471,15 @@ const styles = StyleSheet.create({
 
   action: {
     flex: 1,
+  },
+
+  joinedAction: {
+    backgroundColor: '#16A34A',
+    borderColor: '#16A34A',
+  },
+
+  leftAction: {
+    backgroundColor: '#DC2626',
+    borderColor: '#DC2626',
   },
 });

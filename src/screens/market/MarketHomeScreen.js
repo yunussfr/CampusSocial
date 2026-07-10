@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -29,7 +29,9 @@ import {MarketPromoBanner} from '../../components/market/MarketPromoBanner';
 import MarketRecommendationCard from '../../components/market/MarketRecommendationCard';
 import {Screen} from '../../components/ui/DesignSystem';
 import {MdiIcon} from '../../components/ui/MdiIcon';
+import {ShimmerPlaceholder} from '../../components/ui/ShimmerPlaceholder';
 import {ROUTES} from '../../constants/routes';
+import {useAnalytics} from '../../context/AnalyticsContext';
 import {useAuth} from '../../context/AuthContext';
 import {useChats} from '../../context/ChatContext';
 import {useMarket} from '../../context/MarketContext';
@@ -44,6 +46,7 @@ import {
   getActiveMarketFilterCount,
   getRecommendedListings,
 } from '../../utils/marketFilters';
+import {ANALYTICS_EVENTS} from '../../services/analyticsService';
 
 function SectionTitle({actionLabel, icon, onAction, title}) {
   return (
@@ -80,10 +83,10 @@ function MarketLoadingGrid() {
     <View style={styles.loadingGrid}>
       {[0, 1, 2, 3].map(item => (
         <View key={item} style={styles.loadingCard}>
-          <View style={styles.loadingImage} />
-          <View style={styles.loadingLineLarge} />
-          <View style={styles.loadingLineMedium} />
-          <View style={styles.loadingLineSmall} />
+          <ShimmerPlaceholder height={140} style={styles.loadingImage} />
+          <ShimmerPlaceholder height={14} style={styles.loadingLineLarge} />
+          <ShimmerPlaceholder height={12} style={styles.loadingLineMedium} width="62%" />
+          <ShimmerPlaceholder height={10} style={styles.loadingLineSmall} width="45%" />
         </View>
       ))}
     </View>
@@ -92,6 +95,7 @@ function MarketLoadingGrid() {
 
 export function MarketHomeScreen({navigation}) {
   const {profile, user} = useAuth();
+  const {logEvent} = useAnalytics();
   const {notifications, startNotificationsListener} = useChats();
   const {theme} = useTheme();
   const tabBarHeight = useBottomTabBarHeight();
@@ -125,6 +129,12 @@ export function MarketHomeScreen({navigation}) {
   );
 
   useEffect(() => {
+    logEvent(ANALYTICS_EVENTS.MARKET_VIEW, {
+      listing_count: listings.length,
+    });
+  }, [listings.length, logEvent]);
+
+  useEffect(() => {
     const unsubscribeListings = startListingsListener?.();
     const unsubscribeSaved =
       user?.uid && startSavesListener
@@ -149,6 +159,22 @@ export function MarketHomeScreen({navigation}) {
 
     return startNotificationsListener(user.uid);
   }, [startNotificationsListener, user?.uid]);
+
+  useEffect(() => {
+    const normalizedQuery = searchQuery.trim();
+
+    if (!normalizedQuery) {
+      return undefined;
+    }
+
+    const timeoutId = setTimeout(() => {
+      logEvent(ANALYTICS_EVENTS.MARKET_SEARCH, {
+        query_length: normalizedQuery.length,
+      });
+    }, 650);
+
+    return () => clearTimeout(timeoutId);
+  }, [logEvent, searchQuery]);
 
   const campusFilterSupported = useMemo(() => {
     return listings.some(
@@ -187,17 +213,27 @@ export function MarketHomeScreen({navigation}) {
 
   const recommendationCardWidth = Math.min(280, width * 0.68);
 
-  function openSheet(mode) {
+  const openSheet = useCallback((mode) => {
     setSheetMode(mode);
     setDraftFilters(appliedFilters);
     setFilterVisible(true);
-  }
+  }, [appliedFilters]);
 
-  function applyDraftFilters() {
+  const applyDraftFilters = useCallback(() => {
     setFilters(
       campusFilterSupported
         ? draftFilters
         : {...draftFilters, campusOnly: false},
+    );
+
+    logEvent(
+      sheetMode === 'sort'
+        ? ANALYTICS_EVENTS.MARKET_SORT_APPLY
+        : ANALYTICS_EVENTS.MARKET_FILTER_APPLY,
+      {
+        filter_count: getActiveMarketFilterCount(draftFilters, campusFilterSupported),
+        sort_key: draftFilters.sortKey || '',
+      },
     );
 
     if (draftFilters.categoryKeys.length > 0) {
@@ -205,20 +241,24 @@ export function MarketHomeScreen({navigation}) {
     }
 
     setFilterVisible(false);
-  }
+  }, [campusFilterSupported, draftFilters, logEvent, sheetMode]);
 
-  function clearDraftFilters() {
+  const clearDraftFilters = useCallback(() => {
     setDraftFilters(DEFAULT_MARKET_FILTERS);
-  }
+  }, []);
 
-  function openListing(listing) {
+  const openListing = useCallback((listing) => {
+    logEvent(ANALYTICS_EVENTS.LISTING_OPEN, {
+      listing_id: listing.id,
+      category: listing.category || '',
+    });
     selectListing(listing);
     navigation.navigate(ROUTES.LISTING_DETAIL, {
       listingId: listing.id,
     });
-  }
+  }, [logEvent, navigation, selectListing]);
 
-  async function toggleSaveListing(listing) {
+  const toggleSaveListing = useCallback(async (listing) => {
     if (!user?.uid || !listing?.id || savingIds.includes(listing.id)) {
       return;
     }
@@ -228,13 +268,27 @@ export function MarketHomeScreen({navigation}) {
     try {
       if (savedListingIds.includes(listing.id) && removeSave) {
         await removeSave(user.uid, getListingSaveId(listing.id));
+        logEvent(ANALYTICS_EVENTS.LISTING_UNSAVE, {
+          listing_id: listing.id,
+        });
       } else {
         await saveListing(user.uid, listing);
+        logEvent(ANALYTICS_EVENTS.LISTING_SAVE, {
+          listing_id: listing.id,
+        });
       }
     } finally {
       setSavingIds(current => current.filter(id => id !== listing.id));
     }
-  }
+  }, [
+    getListingSaveId,
+    logEvent,
+    removeSave,
+    saveListing,
+    savedListingIds,
+    savingIds,
+    user?.uid,
+  ]);
 
   function getEmptyType() {
     if (error) {
@@ -252,7 +306,9 @@ export function MarketHomeScreen({navigation}) {
     return 'empty';
   }
 
-  const renderListing = ({item}) => (
+  const keyExtractor = useCallback(item => String(item.id), []);
+
+  const renderListing = useCallback(({item}) => (
     <View style={styles.gridItem}>
       <MarketGridCard
         listing={item}
@@ -261,7 +317,7 @@ export function MarketHomeScreen({navigation}) {
         onSave={() => toggleSaveListing(item)}
       />
     </View>
-  );
+  ), [openListing, savedListingIds, toggleSaveListing]);
 
   return (
     <Screen padded={false}>
@@ -276,7 +332,7 @@ export function MarketHomeScreen({navigation}) {
         ]}
         data={loading && listings.length === 0 ? [] : visibleListings}
         initialNumToRender={8}
-        keyExtractor={item => String(item.id)}
+        keyExtractor={keyExtractor}
         ListEmptyComponent={
           loading && listings.length === 0 ? (
             <MarketLoadingGrid />
@@ -421,8 +477,11 @@ export function MarketHomeScreen({navigation}) {
           </View>
         }
         numColumns={2}
+        maxToRenderPerBatch={6}
+        removeClippedSubviews
         renderItem={renderListing}
         showsVerticalScrollIndicator={false}
+        updateCellsBatchingPeriod={48}
         windowSize={7}
       />
 
@@ -661,31 +720,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   loadingImage: {
-    height: 140,
-    backgroundColor: '#E2E8F0',
+    borderRadius: 0,
   },
   loadingLineLarge: {
-    height: 14,
     marginTop: 12,
     marginHorizontal: 12,
-    borderRadius: 7,
-    backgroundColor: '#E2E8F0',
   },
   loadingLineMedium: {
-    width: '62%',
-    height: 12,
     marginTop: 8,
     marginHorizontal: 12,
-    borderRadius: 6,
-    backgroundColor: '#E2E8F0',
   },
   loadingLineSmall: {
-    width: '45%',
-    height: 10,
     marginTop: 8,
     marginHorizontal: 12,
-    borderRadius: 5,
-    backgroundColor: '#E2E8F0',
   },
 });
 

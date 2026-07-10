@@ -46,16 +46,19 @@ export function selectFeaturedEvents(events, limit = 4) {
     .slice(0, limit);
 }
 
-export function selectUpcomingEvents(events, limit = 8) {
+export function selectUpcomingEvents(events, limit) {
   const now = new Date();
 
-  return sortEventsByDate(events)
+  const upcomingEvents = sortEventsByDate(events)
     .filter(event => {
       const eventDate = getEventDate(event);
 
       return eventDate && eventDate.getTime() > now.getTime();
-    })
-    .slice(0, limit);
+    });
+
+  return typeof limit === 'number'
+    ? upcomingEvents.slice(0, limit)
+    : upcomingEvents;
 }
 
 export function isActiveEventNow(event) {

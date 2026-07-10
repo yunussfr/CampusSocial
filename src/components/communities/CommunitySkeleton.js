@@ -1,5 +1,6 @@
 import React from 'react';
 import {StyleSheet, Text, View} from 'react-native';
+import {ShimmerPlaceholder} from '../ui/ShimmerPlaceholder';
 
 export function CommunitySkeleton({theme}) {
   return (
@@ -15,10 +16,10 @@ export function CommunitySkeleton({theme}) {
               styles.recommendationCard,
               {backgroundColor: theme.colors.surface, borderColor: theme.colors.border},
             ]}>
-            <View style={styles.cover} />
-            <View style={styles.lineLarge} />
-            <View style={styles.lineMedium} />
-            <View style={styles.lineSmall} />
+            <ShimmerPlaceholder height={110} style={styles.cover} />
+            <ShimmerPlaceholder height={15} style={styles.lineLarge} />
+            <ShimmerPlaceholder height={12} style={styles.lineMedium} width="68%" />
+            <ShimmerPlaceholder height={10} style={styles.lineSmall} width="45%" />
           </View>
         ))}
       </View>
@@ -29,10 +30,10 @@ export function CommunitySkeleton({theme}) {
             styles.listCard,
             {backgroundColor: theme.colors.surface, borderColor: theme.colors.border},
           ]}>
-          <View style={styles.avatar} />
+          <ShimmerPlaceholder borderRadius={18} height={64} width={64} />
           <View style={styles.listLines}>
-            <View style={styles.lineLarge} />
-            <View style={styles.lineMedium} />
+            <ShimmerPlaceholder height={15} style={styles.lineLarge} />
+            <ShimmerPlaceholder height={12} style={styles.lineMedium} width="68%" />
           </View>
         </View>
       ))}
@@ -60,32 +61,20 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   cover: {
-    height: 110,
-    backgroundColor: '#E2E8F0',
+    borderRadius: 0,
   },
   lineLarge: {
-    height: 15,
     marginTop: 12,
     marginHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: '#E2E8F0',
   },
   lineMedium: {
-    width: '68%',
-    height: 12,
     marginTop: 8,
     marginHorizontal: 12,
-    borderRadius: 6,
-    backgroundColor: '#E2E8F0',
   },
   lineSmall: {
-    width: '45%',
-    height: 10,
     marginTop: 8,
     marginHorizontal: 12,
     marginBottom: 12,
-    borderRadius: 5,
-    backgroundColor: '#E2E8F0',
   },
   listCard: {
     minHeight: 92,
@@ -95,12 +84,6 @@ const styles = StyleSheet.create({
     padding: 12,
     borderWidth: 1,
     borderRadius: 18,
-  },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 18,
-    backgroundColor: '#E2E8F0',
   },
   listLines: {
     flex: 1,

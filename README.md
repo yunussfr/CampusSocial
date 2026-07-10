@@ -1,97 +1,237 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# CampusConnect
 
-# Getting Started
+CampusConnect, kampüs içi sosyal etkileşimleri tek mobil uygulamada toplayan React Native tabanlı bir projedir. Uygulama; etkinlik oluşturma ve katılma, topluluk yönetimi, ikinci el market ilanları, gerçek zamanlı mesajlaşma, bildirimler, profil ve takip akışlarını Firebase altyapısı ile çalıştırır.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+Proje teslim ve demo odaklı hazırlanmıştır: kullanıcı akışları Firebase Console üzerinden izlenebilir, realtime davranışlar iki kullanıcıyla gösterilebilir ve temel kalite kontrolleri terminalden çalıştırılabilir.
 
-## Step 1: Start Metro
+## Özellikler
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+- Firebase Auth ile kayıt, giriş, profil tamamlama ve oturum yönetimi
+- Firestore realtime listener'ları ile etkinlik, topluluk, market, chat ve bildirim akışları
+- Etkinlik oluşturma, etkinliğe katılma ve Hub üzerinden takip
+- Topluluk oluşturma, özel topluluk katılım isteği, gönderi ve yorum akışı
+- Market ilanı oluşturma, fotoğraf yükleme, kaydetme ve satıcıyla mesajlaşma
+- Chat listesi, mesaj detayı, okunmamış mesaj sayacı ve kullanıcı bildirimleri
+- Profil düzenleme, takipçi/takip edilen ekranı, tema ve bildirim ayarları
+- Firebase Analytics eventleri, liste performans optimizasyonları ve hafif animasyonlar
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+## Teknoloji Yığını
+
+- React Native 0.86
+- React 19
+- React Navigation
+- Firebase Auth
+- Cloud Firestore
+- Firebase Storage
+- Firebase Cloud Functions
+- Firebase Cloud Messaging
+- Firebase Analytics
+- Jest ve React Test Renderer
+
+## Kurulum
+
+Gereksinimler:
+
+- Node.js `>= 22.11.0`
+- npm
+- Android Studio veya Xcode geliştirme ortamı
+- Firebase CLI
+- Aktif bir Firebase projesi
+
+Bağımlılıkları kur:
 
 ```sh
-# Using npm
+npm install
+```
+
+Metro server'ı başlat:
+
+```sh
 npm start
-
-# OR using Yarn
-yarn start
 ```
 
-## Step 2: Build and run your app
-
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
+Android'de çalıştır:
 
 ```sh
-# Using npm
 npm run android
-
-# OR using Yarn
-yarn android
 ```
 
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+iOS için CocoaPods kurulumu yaptıktan sonra çalıştır:
 
 ```sh
+cd ios
 bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
 bundle exec pod install
+cd ..
+npm run ios
 ```
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+## Firebase Kurulumu
+
+Firebase Console'da şu servislerin aktif olması gerekir:
+
+- Authentication
+- Cloud Firestore
+- Storage
+- Cloud Functions
+- Cloud Messaging
+- Analytics
+
+Kurulum notları:
+
+- Firebase native config dosyaları projeye yerel olarak eklenmelidir.
+- Android için `google-services.json`, iOS için `GoogleService-Info.plist` kullanılır.
+- Bu config dosyaları Git'e eklenmemelidir.
+- Firestore ve Storage security rules deploy edilmelidir.
+- Cloud Functions deploy edilmeden sayaç, mesaj bildirimi ve bazı server-side işlemler tamamlanmış sayılmaz.
+
+Firestore rules deploy:
 
 ```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
+firebase deploy --only firestore:rules
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+Functions deploy:
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+```sh
+firebase deploy --only functions
+```
 
-## Step 3: Modify your app
+Storage rules kullanılıyorsa:
 
-Now that you have successfully run the app, let's make changes!
+```sh
+firebase deploy --only storage
+```
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+## Firestore Şeması
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+Ana koleksiyonlar:
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+- `users`: Kullanıcı profili, sayaçlar, FCM token, profil bilgileri
+- `events`: Etkinlik bilgileri, konum, tarih, kapasite ve organizatör bilgisi
+- `communities`: Topluluk bilgileri, gizlilik durumu, medya ve üyelik verileri
+- `listings`: Market ilanları, ürün bilgileri, fiyat, fotoğraflar ve satıcı snapshot'ı
+- `chats`: İki kullanıcı arasındaki konuşmalar, son mesaj ve okunmamış sayaçlar
 
-## Congratulations! :tada:
+Alt koleksiyonlar:
 
-You've successfully run and modified your React Native App. :partying_face:
+- `events/{eventId}/attendees`
+- `events/{eventId}/comments`
+- `communities/{communityId}/members`
+- `communities/{communityId}/joinRequests`
+- `communities/{communityId}/posts`
+- `communities/{communityId}/posts/{postId}/comments`
+- `chats/{chatId}/messages`
+- `users/{userId}/notifications`
+- `users/{userId}/savedEvents`
+- `users/{userId}/savedListings`
+- `users/{userId}/saves`
+- `users/{userId}/follows`
 
-### Now what?
+Sayaç alanları client tarafından doğrudan güncellenmez. Katılımcı, üye, kayıt, takip ve benzeri sayaçlar Cloud Functions üzerinden güncellenir.
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+## Uygulama Mimarisi
 
-# Troubleshooting
+Proje akışı şu sınırı korur:
 
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+```text
+Screen -> Context action -> Service -> Firebase
+```
 
-# Learn More
+Context katmanı:
 
-To learn more about React Native, take a look at the following resources:
+- `AuthContext`: Auth state, profil, giriş/kayıt, profil güncelleme
+- `EventContext`: Etkinlik listesi, seçim, oluşturma, katılma/ayrılma
+- `CommunityContext`: Topluluk listesi, detay, üyelik, post ve katılım isteği
+- `MarketContext`: İlan listesi, ilan oluşturma, kullanıcının ilanları
+- `ChatContext`: Chat listesi, mesajlar, bildirimler, okunma işlemleri
+- `SavedContext`: Kaydedilen etkinlik ve ilanlar
+- `ThemeContext`: Light/dark tema
+- `AnalyticsContext`: Analytics event ve screen tracking
 
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+Reducer kullanılan modüller:
+
+- Events
+- Communities
+- Market
+
+Bu yapı ekran dosyalarının Firebase detaylarıyla şişmesini engeller ve realtime listener yönetimini context/service katmanında tutar.
+
+## Cloud Functions
+
+Projede kullanılan Cloud Functions listesi:
+
+- `onEventJoin`: Etkinliğe katılım sonrası attendee count günceller
+- `onEventLeave`: Etkinlikten ayrılma sonrası attendee count düşürür
+- `onCommunityJoin`: Topluluk üyelik sayısını günceller
+- `onCommunityLeave`: Topluluktan ayrılma sonrası üyelik sayısını düşürür
+- `onMessageSent`: Chat son mesajını, updatedAt alanını ve bildirim akışını günceller
+- `onListingSave`: İlan kaydetme sayacını günceller
+- `onCommunityJoinRequestCreated`: Özel topluluk katılım isteğinde topluluk sahibine bildirim oluşturur
+- `onCommunityJoinRequestUpdated`: Katılım isteği onay/red sonucunu işler
+- `onUserFollow`: Takip sayaçlarını ve takip bildirimini oluşturur
+- `onUserUnfollow`: Takip sayaçlarını geri alır
+
+## Kalite Kontrolleri
+
+Lint:
+
+```sh
+npm run lint
+```
+
+Test:
+
+```sh
+npm test
+```
+
+Firestore rules için emulator kontrolü:
+
+```sh
+firebase emulators:start --only firestore
+```
+
+Temiz teslim öncesi önerilen kontrol sırası:
+
+```sh
+npm install
+npm run lint
+npm test
+firebase deploy --only firestore:rules
+firebase deploy --only functions
+```
+
+## Demo Senaryosu
+
+Sunum için önerilen uçtan uca demo:
+
+1. Yeni kullanıcı kaydı oluştur.
+2. Profil tamamlama ekranında departman, sınıf, ilgi alanı ve bio bilgilerini gir.
+3. Discover ekranından yeni etkinlik oluştur.
+4. İkinci kullanıcıyla giriş yap ve etkinliğe katıl.
+5. Hub ekranında katılınan etkinliğin göründüğünü göster.
+6. Community ekranında topluluk oluştur.
+7. Özel topluluğa başka kullanıcıdan katılım isteği gönder.
+8. Bildirimler ekranında isteği onayla veya reddet.
+9. Market ekranında yeni ilan oluştur.
+10. Başka kullanıcıyla ilan sahibine mesaj gönder.
+11. Messages ekranında realtime mesajlaşmayı göster.
+12. Firebase Console'da Firestore yazma/okuma değişikliklerini canlı göster.
+
+Bu demo; Auth, Firestore, Storage, Functions, Messaging ve realtime listener akışlarının birlikte çalıştığını gösterir.
+
+## Proje Komutları
+
+```sh
+npm start
+npm run android
+npm run ios
+npm run lint
+npm test
+npm run seed:firestore
+```
+
+## Teslim Notu
+
+CampusConnect, Firebase Console'da izlenebilir gerçek okuma/yazma akışlarıyla demo edilecek şekilde hazırlanmıştır. Sunum sırasında "çalışıyor ama gösteremiyorum" durumunu önlemek için demo öncesi Firebase rules ve Functions deploy durumunun kontrol edilmesi gerekir.
