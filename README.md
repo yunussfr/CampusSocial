@@ -68,18 +68,7 @@ dönüştürülebilir. Ekran → Context → Service → Firebase sınırı, bu 
 - ekran ve kullanıcı aksiyonu için Firebase Analytics çağrıları,
 - sayaç ve bildirim işlemleri için 10 adet Cloud Functions trigger kaynağı.
 
-## Ana uygulama alanları
 
-<table align="center">
-  <tr>
-    <td align="center" width="16.6%"><img src="./src/assets/icons/Hub.png" width="54" alt="Hub" /><br /><strong>Hub</strong></td>
-    <td align="center" width="16.6%"><img src="./src/assets/icons/tab-discover.png" width="54" alt="Keşfet" /><br /><strong>Keşfet</strong></td>
-    <td align="center" width="16.6%"><img src="./src/assets/icons/tab-community.png" width="54" alt="Topluluklar" /><br /><strong>Topluluklar</strong></td>
-    <td align="center" width="16.6%"><img src="./src/assets/icons/tab-market.png" width="54" alt="Market" /><br /><strong>Market</strong></td>
-    <td align="center" width="16.6%"><img src="./src/assets/icons/tab-messages.png" width="54" alt="Mesajlar" /><br /><strong>Mesajlar</strong></td>
-    <td align="center" width="16.6%"><img src="./src/assets/icons/tab-profil.png" width="54" alt="Profil" /><br /><strong>Profil</strong></td>
-  </tr>
-</table>
 
 ### Auth
 
