@@ -33,17 +33,10 @@ CampusConnect; etkinlik, topluluk, kampüs marketi, mesajlaşma ve profil deneyi
 
 dönüştürülebilir. Ekran → Context → Service → Firebase sınırı, bu değişikliklerin bütün projeyi birbirine bağlamadan yapılabilmesi için korunur.
 
-<p align="center">
-  <img src="./docs/readme/screen-map.svg" width="100%" alt="CampusConnect ekran ve modül haritası" />
-</p>
 
-<p align="center"><sub>Bu görsel, repodaki gerçek ekran dosyalarının haritasıdır; cihaz ekran görüntüsü değildir.</sub></p>
 
 ## Güncel proje özeti
 
-<p align="center">
-  <img src="./docs/readme/project-status.svg" width="100%" alt="CampusConnect güncel kaynak kodu ve geliştirme durumu" />
-</p>
 
 | Alan | Kod durumu | Canlı çalışma koşulu |
 | --- | :---: | --- |
@@ -339,10 +332,6 @@ Katkı gönderirken:
 4. Yeni veri alanları için rules ve index etkisini kontrol edin.
 5. Yeni veya değişen ekran için gerçek cihaz görüntüsünü README'ye ekleyin.
 6. Yerel config, servis hesabı, token veya imzalama bilgisi commit etmeyin.
-
-## Lisans
-
-Bu repoda henüz bir açık kaynak lisansı bulunmamaktadır. Başkalarının projeyi kullanma, değiştirme ve dağıtma koşullarını netleştirmek için uygun bir `LICENSE` dosyası eklenmelidir.
 
 ---
 
