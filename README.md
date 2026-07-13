@@ -1,64 +1,245 @@
-# CampusConnect
+<p align="center">
+  <img src="./src/assets/images/campus-vibe-logo.png" width="150" alt="CampusConnect logo" />
+</p>
 
-CampusConnect, kampüs içi sosyal etkileşimleri tek mobil uygulamada toplayan React Native tabanlı bir projedir. Uygulama; etkinlik oluşturma ve katılma, topluluk yönetimi, ikinci el market ilanları, gerçek zamanlı mesajlaşma, bildirimler, profil ve takip akışlarını Firebase altyapısı ile çalıştırır.
+<h1 align="center">CampusConnect</h1>
 
-Proje teslim ve demo odaklı hazırlanmıştır: kullanıcı akışları Firebase Console üzerinden izlenebilir, realtime davranışlar iki kullanıcıyla gösterilebilir ve temel kalite kontrolleri terminalden çalıştırılabilir.
+<p align="center">
+  <strong>Kampüs iletişimi için geliştirilebilir React Native + Firebase uygulama temeli.</strong>
+</p>
 
-## Özellikler
+<p align="center">
+  <img src="https://img.shields.io/badge/durum-aktif%20geliştirme-F5B942?style=flat-square" alt="Durum: aktif geliştirme" />
+  <img src="https://img.shields.io/badge/React%20Native-0.86-61DAFB?style=flat-square&logo=react&logoColor=111827" alt="React Native 0.86" />
+  <img src="https://img.shields.io/badge/Firebase-Auth%20%7C%20Firestore%20%7C%20Storage-FFCA28?style=flat-square&logo=firebase&logoColor=111827" alt="Firebase" />
+  <img src="https://img.shields.io/badge/ekran-27-7C3AED?style=flat-square" alt="27 ekran" />
+  <img src="https://img.shields.io/badge/platform-Android%20%7C%20iOS-2563EB?style=flat-square" alt="Android ve iOS" />
+</p>
 
-- Firebase Auth ile kayıt, giriş, profil tamamlama ve oturum yönetimi
-- Firestore realtime listener'ları ile etkinlik, topluluk, market, chat ve bildirim akışları
-- Etkinlik oluşturma, etkinliğe katılma ve Hub üzerinden takip
-- Topluluk oluşturma, özel topluluk katılım isteği, gönderi ve yorum akışı
-- Market ilanı oluşturma, fotoğraf yükleme, kaydetme ve satıcıyla mesajlaşma
-- Chat listesi, mesaj detayı, okunmamış mesaj sayacı ve kullanıcı bildirimleri
-- Profil düzenleme, takipçi/takip edilen ekranı, tema ve bildirim ayarları
-- Firebase Analytics eventleri, liste performans optimizasyonları ve hafif animasyonlar
+> [!IMPORTANT]
+> CampusConnect bitmiş veya production-ready bir sosyal ağ değildir. Repo; kapsamlı ekranlar, modüler uygulama katmanları ve Firebase entegrasyon kodu içeren, aktif geliştirme aşamasındaki bir MVP/başlangıç iskeletidir. Canlı davranışlar kendi Firebase projenizin yapılandırılmasına, security rules ve Cloud Functions deploy durumuna bağlıdır.
 
-## Teknoloji Yığını
+## Bu repo ne sunuyor?
 
-- React Native 0.86
-- React 19
-- React Navigation
-- Firebase Auth
-- Cloud Firestore
-- Firebase Storage
-- Firebase Cloud Functions
-- Firebase Cloud Messaging
-- Firebase Analytics
-- Jest ve React Test Renderer
+CampusConnect; etkinlik, topluluk, kampüs marketi, mesajlaşma ve profil deneyimlerini tek mobil uygulamada birleştiren bir kod tabanıdır. Ancak amaç yalnızca belirli bir uygulamayı tamamlamak değildir: geliştiriciler modülleri çıkarabilir, birleştirebilir veya kendi kullanıcılarının iletişim biçimine göre yeniden tasarlayabilir.
+
+Örneğin bu temel:
+
+- yalnızca duyuru ve etkinlik odaklı bir kampüs uygulamasına,
+- kulüp üyeliği ve özel topluluk akışına,
+- gerçek zamanlı öğrenci mesajlaşma ağına,
+- kampüs içi ikinci el pazarına,
+- mentorluk, çalışma grubu veya mezun ağına
+
+dönüştürülebilir. Ekran → Context → Service → Firebase sınırı, bu değişikliklerin bütün projeyi birbirine bağlamadan yapılabilmesi için korunur.
+
+<p align="center">
+  <img src="./docs/readme/screen-map.svg" width="100%" alt="CampusConnect ekran ve modül haritası" />
+</p>
+
+<p align="center"><sub>Bu görsel, repodaki gerçek ekran dosyalarının haritasıdır; cihaz ekran görüntüsü değildir.</sub></p>
+
+## Güncel proje özeti
+
+<p align="center">
+  <img src="./docs/readme/project-status.svg" width="100%" alt="CampusConnect güncel kaynak kodu ve geliştirme durumu" />
+</p>
+
+| Alan | Kod durumu | Canlı çalışma koşulu |
+| --- | :---: | --- |
+| Uygulama kabuğu ve navigasyon | ✅ Mevcut | 6 ana tab, auth stack ve modül stack'leri kodda bağlı |
+| Kimlik doğrulama | ✅ Mevcut | Firebase Auth ve kullanıcı profili için Firebase projesi gerekir |
+| Discover ve etkinlikler | ✅ Mevcut | Firestore, Storage ve sayaç Functions deploy'u gerekir |
+| Topluluklar | ✅ Mevcut | Açık üyelik ve özel katılım isteği akışları Firebase'e bağlıdır |
+| Kampüs marketi | ✅ Mevcut | İlan verisi Firestore'a, fotoğraflar Storage'a bağlıdır |
+| Mesajlaşma ve bildirimler | ✅ Mevcut | Realtime listener'lar ve mesaj trigger'ları Firebase'e bağlıdır |
+| Profil, takip ve kaydedilenler | ✅ Mevcut | Firestore dokümanları ve takip Functions kaynakları kullanılır |
+| Açık/koyu tema | ✅ Mevcut | Tercih AsyncStorage ile cihazda saklanır |
+| Topluluk yorumları | ⚠️ Kısmi | Görsel alan var; yorum yazma alanı şu anda devre dışıdır |
+| Firestore seed komutu | ❌ Eksik | `package.json` komutu var fakat `scripts/seedFirestore.js` repoda yok |
+| Otomatik test | ⚠️ Düzeltilmeli | Jest, vector icon `.ttf` dosyası mock edilmediği için şu anda başarısız |
+| Production/deploy doğrulaması | ⏳ Harici | Aktif Firebase projesi, servisler, plan ve deploy durumu doğrulanmalıdır |
+
+### Kod seviyesinde bulunan başlıca akışlar
+
+- Firebase email/password ile kayıt, giriş, şifre sıfırlama ve profil tamamlama,
+- auth durumuna göre giriş veya ana uygulama navigasyonu,
+- Firestore realtime etkinlik, topluluk, ilan, sohbet ve bildirim listener'ları,
+- etkinlik oluşturma, kapak yükleme, katılma ve ayrılma,
+- topluluk oluşturma, kapak/ikon yükleme, açık üyelik ve özel katılım isteği,
+- topluluk gönderisi oluşturma ve gönderi/ilan kaydetme,
+- çoklu fotoğraflı market ilanı oluşturma ve satıcıyla sohbet başlatma,
+- birebir sohbet, mesaj gönderme, okunma durumu ve kullanıcı bildirimleri,
+- profil düzenleme, avatar yükleme, takip/takipten çıkma ve bağlantı listeleri,
+- kalıcı açık/koyu tema, bildirim tokeni yönetimi, çıkış ve hesap silme,
+- ekran ve kullanıcı aksiyonu için Firebase Analytics çağrıları,
+- sayaç ve bildirim işlemleri için 10 adet Cloud Functions trigger kaynağı.
+
+## Ana uygulama alanları
+
+<table align="center">
+  <tr>
+    <td align="center" width="16.6%"><img src="./src/assets/icons/Hub.png" width="54" alt="Hub" /><br /><strong>Hub</strong></td>
+    <td align="center" width="16.6%"><img src="./src/assets/icons/tab-discover.png" width="54" alt="Keşfet" /><br /><strong>Keşfet</strong></td>
+    <td align="center" width="16.6%"><img src="./src/assets/icons/tab-community.png" width="54" alt="Topluluklar" /><br /><strong>Topluluklar</strong></td>
+    <td align="center" width="16.6%"><img src="./src/assets/icons/tab-market.png" width="54" alt="Market" /><br /><strong>Market</strong></td>
+    <td align="center" width="16.6%"><img src="./src/assets/icons/tab-messages.png" width="54" alt="Mesajlar" /><br /><strong>Mesajlar</strong></td>
+    <td align="center" width="16.6%"><img src="./src/assets/icons/tab-profil.png" width="54" alt="Profil" /><br /><strong>Profil</strong></td>
+  </tr>
+</table>
+
+### Auth
+
+`Login`, `Register`, `ForgotPassword` ve `ProfileCompletion` ekranlarından oluşur. `AuthContext`, Firebase oturumunu dinler ve profil tamamlanmadan ana uygulamaya geçişi engeller.
+
+### Hub ve Discover
+
+Hub; kullanıcı, etkinlik ve topluluk özetlerini bir araya getirir. Discover; etkinlikleri ve popüler toplulukları gerçek zamanlı dinler, arama/kategori filtreleri sunar ve etkinlik detayına ya da oluşturma akışına yönlendirir.
+
+### Communities
+
+Listeleme, arama, filtreleme, öneriler, topluluk detayı, açık topluluğa katılma, özel topluluğa istek gönderme, topluluk oluşturma ve gönderi paylaşma akışlarını içerir. Gönderi kaydetme çalışacak biçimde bağlıdır; yorum oluşturma henüz uygulanmamıştır.
+
+### Market
+
+İlan listeleme, gelişmiş filtreler, ilan detayı, çoklu fotoğraf yükleme, ilan kaydetme, kullanıcının kendi ilanları ve ilan sahibine doğrudan mesaj gönderme akışlarını içerir.
+
+### Chat ve Notifications
+
+Kullanıcı sohbetlerini ve mesajları Firestore listener'larıyla dinler. Mesaj gönderme, sohbeti okundu işaretleme, bildirimleri listeleme ve özel topluluk katılım isteğini bildirim üzerinden onaylama/reddetme kodu bulunur.
+
+### Profile ve Settings
+
+Kullanıcının profilini, takipçilerini, takip ettiklerini ve diğer kullanıcı profillerini gösterir. Profil düzenleme, avatar yükleme, kaydedilen içerikler, tema, bildirim tokeni, çıkış ve hesap silme işlemlerine erişim sağlar.
+
+## Mimari
+
+```mermaid
+flowchart LR
+    UI["Screens & Components"] --> CTX["Context actions"]
+    CTX --> SVC["Service layer"]
+    SVC --> FB["Firebase SDK"]
+    FB --> AUTH["Authentication"]
+    FB --> DB["Cloud Firestore"]
+    FB --> STORAGE["Storage"]
+    FB --> MSG["Messaging & Analytics"]
+    DB --> FN["Cloud Functions"]
+    FN --> DB
+```
+
+Temel kural:
+
+```text
+Screen → Context action → Service → Firebase
+```
+
+- Ekranlar Firebase SDK'yı doğrudan çağırmaz.
+- Context'ler ekranların kullandığı public action ve state'leri sunar.
+- Service dosyaları okuma, yazma, listener ve upload işlemlerini taşır.
+- Event, Community ve Market state'leri reducer ile yönetilir.
+- Sayaç alanları client tarafından doğrudan değiştirilmez; Cloud Functions tarafından güncellenir.
+
+## Proje yapısı
+
+```text
+CampusConnect/
+├── android/                 # Android native proje
+├── ios/                     # iOS native proje
+├── src/
+│   ├── assets/              # Logo, görseller ve gerçek tab ikonları
+│   ├── components/          # 53 ortak/modül bazlı UI bileşeni
+│   ├── constants/           # Route, koleksiyon, tema ve seçenek sabitleri
+│   ├── context/             # 8 domain context'i ve AppProviders
+│   ├── hooks/               # Ortak React hook'ları
+│   ├── navigation/          # Auth, tab ve modül stack'leri
+│   ├── reducers/            # Events, Communities ve Market reducer'ları
+│   ├── screens/             # 8 alana ayrılmış 27 ekran
+│   ├── services/            # 8 servis modülü ve Firebase gateway
+│   └── utils/               # Filtreleme, doğrulama ve formatlama yardımcıları
+├── functions/               # 10 Firestore tabanlı Cloud Functions trigger'ı
+├── docs/                    # Tasarım, kurallar, index ve güvenlik planları
+├── firestore.rules          # Firestore güvenlik kuralları
+├── firestore.indexes.json   # Bileşik index tanımları
+├── storage.rules            # Storage güvenlik kuralları
+├── firebase.json            # Firebase deploy yapılandırması
+└── App.js                   # Provider, navigation ve analytics girişi
+```
+
+## Teknoloji yığını
+
+- React Native `0.86.0` ve React `19.2.3`
+- React Navigation `7`
+- React Native Firebase: App, Auth, Firestore, Storage, Messaging ve Analytics
+- AsyncStorage, React Native Maps ve React Native Image Picker
+- React Native SVG, Linear Gradient ve vector icons
+- Firebase Cloud Functions v2
+- Jest, React Test Renderer, ESLint ve Prettier
 
 ## Kurulum
 
-Gereksinimler:
+### 1. Gereksinimler
 
-- Node.js `>= 22.11.0`
-- npm
-- Android Studio veya Xcode geliştirme ortamı
-- Firebase CLI
-- Aktif bir Firebase projesi
+- Node.js `22.11.0` veya üzeri,
+- npm,
+- hedef platform için hazırlanmış [React Native geliştirme ortamı](https://reactnative.dev/docs/set-up-your-environment),
+- Android için Android Studio ve SDK,
+- iOS için macOS, Xcode, Ruby/Bundler ve CocoaPods,
+- Firebase CLI ve kullanabileceğiniz bir Firebase projesi.
 
-Bağımlılıkları kur:
+### 2. Bağımlılıkları yükleyin
 
-```sh
+```bash
+git clone https://github.com/yunussfr/CampusSocial.git
+cd CampusSocial
 npm install
+npm --prefix functions install
 ```
 
-Metro server'ı başlat:
+### 3. Firebase projesini bağlayın
 
-```sh
+Firebase Console'da en az şu servisleri hazırlayın:
+
+- Email/Password Authentication,
+- Cloud Firestore,
+- Cloud Storage,
+- Cloud Messaging,
+- Analytics,
+- Cloud Functions için gerekli proje planı ve Google Cloud servisleri.
+
+Native yapılandırma dosyalarını yerel olarak ekleyin:
+
+```text
+android/app/google-services.json
+ios/GoogleService-Info.plist
+```
+
+Android dosyası `.gitignore` içindedir. iOS dosyasını da Git'e eklemeyin. `.env.example`, yerel proje bilgileri ve ileride geri eklenebilecek admin seed akışı için referans dosyasıdır; React Native Firebase'in native config dosyalarının yerine geçmez.
+
+### 4. Firebase rules, index ve Functions kaynaklarını deploy edin
+
+```bash
+firebase login
+firebase use --add
+firebase deploy --only firestore:rules,firestore:indexes,storage
+firebase deploy --only functions
+```
+
+> [!NOTE]
+> Repoda rules, indexes ve Functions kaynakları vardır; belirli bir Firebase projesine başarıyla deploy edildikleri yalnızca kaynak koddan doğrulanamaz.
+
+### 5. Uygulamayı çalıştırın
+
+```bash
 npm start
 ```
 
-Android'de çalıştır:
+İkinci bir terminalde:
 
-```sh
+```bash
+# Android
 npm run android
-```
 
-iOS için CocoaPods kurulumu yaptıktan sonra çalıştır:
-
-```sh
+# iOS
 cd ios
 bundle install
 bundle exec pod install
@@ -66,172 +247,105 @@ cd ..
 npm run ios
 ```
 
-## Firebase Kurulumu
-
-Firebase Console'da şu servislerin aktif olması gerekir:
-
-- Authentication
-- Cloud Firestore
-- Storage
-- Cloud Functions
-- Cloud Messaging
-- Analytics
-
-Kurulum notları:
-
-- Firebase native config dosyaları projeye yerel olarak eklenmelidir.
-- Android için `google-services.json`, iOS için `GoogleService-Info.plist` kullanılır.
-- Bu config dosyaları Git'e eklenmemelidir.
-- Firestore ve Storage security rules deploy edilmelidir.
-- Cloud Functions deploy edilmeden sayaç, mesaj bildirimi ve bazı server-side işlemler tamamlanmış sayılmaz.
-
-Firestore rules deploy:
-
-```sh
-firebase deploy --only firestore:rules
-```
-
-Functions deploy:
-
-```sh
-firebase deploy --only functions
-```
-
-Storage rules kullanılıyorsa:
-
-```sh
-firebase deploy --only storage
-```
-
-## Firestore Şeması
+## Firestore modeli
 
 Ana koleksiyonlar:
 
-- `users`: Kullanıcı profili, sayaçlar, FCM token, profil bilgileri
-- `events`: Etkinlik bilgileri, konum, tarih, kapasite ve organizatör bilgisi
-- `communities`: Topluluk bilgileri, gizlilik durumu, medya ve üyelik verileri
-- `listings`: Market ilanları, ürün bilgileri, fiyat, fotoğraflar ve satıcı snapshot'ı
-- `chats`: İki kullanıcı arasındaki konuşmalar, son mesaj ve okunmamış sayaçlar
+| Koleksiyon | Amaç |
+| --- | --- |
+| `users` | Profil, sayaç, FCM tokeni ve kullanıcı bilgileri |
+| `events` | Etkinlik, tarih, konum, kapasite ve organizatör verisi |
+| `communities` | Topluluk, gizlilik, medya ve üyelik bilgileri |
+| `listings` | Market ilanı, fotoğraf, fiyat ve satıcı snapshot'ı |
+| `chats` | Katılımcılar, son mesaj ve okunmamış sayaçları |
 
-Alt koleksiyonlar:
-
-- `events/{eventId}/attendees`
-- `events/{eventId}/comments`
-- `communities/{communityId}/members`
-- `communities/{communityId}/joinRequests`
-- `communities/{communityId}/posts`
-- `communities/{communityId}/posts/{postId}/comments`
-- `chats/{chatId}/messages`
-- `users/{userId}/notifications`
-- `users/{userId}/savedEvents`
-- `users/{userId}/savedListings`
-- `users/{userId}/saves`
-- `users/{userId}/follows`
-
-Sayaç alanları client tarafından doğrudan güncellenmez. Katılımcı, üye, kayıt, takip ve benzeri sayaçlar Cloud Functions üzerinden güncellenir.
-
-## Uygulama Mimarisi
-
-Proje akışı şu sınırı korur:
+Önemli alt koleksiyonlar:
 
 ```text
-Screen -> Context action -> Service -> Firebase
+events/{eventId}/attendees
+communities/{communityId}/members
+communities/{communityId}/joinRequests
+communities/{communityId}/posts
+chats/{chatId}/messages
+users/{userId}/notifications
+users/{userId}/saves
+users/{userId}/follows
 ```
-
-Context katmanı:
-
-- `AuthContext`: Auth state, profil, giriş/kayıt, profil güncelleme
-- `EventContext`: Etkinlik listesi, seçim, oluşturma, katılma/ayrılma
-- `CommunityContext`: Topluluk listesi, detay, üyelik, post ve katılım isteği
-- `MarketContext`: İlan listesi, ilan oluşturma, kullanıcının ilanları
-- `ChatContext`: Chat listesi, mesajlar, bildirimler, okunma işlemleri
-- `SavedContext`: Kaydedilen etkinlik ve ilanlar
-- `ThemeContext`: Light/dark tema
-- `AnalyticsContext`: Analytics event ve screen tracking
-
-Reducer kullanılan modüller:
-
-- Events
-- Communities
-- Market
-
-Bu yapı ekran dosyalarının Firebase detaylarıyla şişmesini engeller ve realtime listener yönetimini context/service katmanında tutar.
 
 ## Cloud Functions
 
-Projede kullanılan Cloud Functions listesi:
+| Trigger | Görev |
+| --- | --- |
+| `onEventJoin` / `onEventLeave` | Etkinlik katılımcı sayacını günceller |
+| `onCommunityJoin` / `onCommunityLeave` | Topluluk üye sayacını günceller |
+| `onMessageSent` | Son mesajı, okunmamış sayacı ve bildirimi günceller |
+| `onListingSave` | İlan kaydetme sayacını günceller |
+| `onCommunityJoinRequestCreated` | Topluluk sahibine istek bildirimi oluşturur |
+| `onCommunityJoinRequestUpdated` | Onay/red sonucunu üyeliğe ve bildirime yansıtır |
+| `onUserFollow` / `onUserUnfollow` | Takip sayaçlarını ve takip bildirimini yönetir |
 
-- `onEventJoin`: Etkinliğe katılım sonrası attendee count günceller
-- `onEventLeave`: Etkinlikten ayrılma sonrası attendee count düşürür
-- `onCommunityJoin`: Topluluk üyelik sayısını günceller
-- `onCommunityLeave`: Topluluktan ayrılma sonrası üyelik sayısını düşürür
-- `onMessageSent`: Chat son mesajını, updatedAt alanını ve bildirim akışını günceller
-- `onListingSave`: İlan kaydetme sayacını günceller
-- `onCommunityJoinRequestCreated`: Özel topluluk katılım isteğinde topluluk sahibine bildirim oluşturur
-- `onCommunityJoinRequestUpdated`: Katılım isteği onay/red sonucunu işler
-- `onUserFollow`: Takip sayaçlarını ve takip bildirimini oluşturur
-- `onUserUnfollow`: Takip sayaçlarını geri alır
+## Kalite durumu ve bilinen eksikler
 
-## Kalite Kontrolleri
+Bu bölüm güncel kaynak kodu olduğundan daha tamamlanmış göstermemek için özellikle tutulur.
 
-Lint:
+| Kontrol | Güncel sonuç |
+| --- | --- |
+| `npm run lint` | ✅ 0 hata, 28 uyarı |
+| `npm test -- --runInBand` | ❌ Vector icon `.ttf` dosyası için Jest mock eşlemesi eksik |
+| Android/iOS cihaz testi | ⏳ Bu README güncellemesinde bağlı cihaz bulunmadığı için çalıştırılmadı |
+| Firebase canlı akışları | ⏳ Yerel config ve deploy edilen Firebase projesiyle doğrulanmalı |
 
-```sh
-npm run lint
+Bilinen geliştirme alanları:
+
+- `PostDetailScreen` yorum alanı görsel olarak mevcut fakat `editable={false}` durumunda.
+- `npm run seed:firestore`, repoda bulunmayan `scripts/seedFirestore.js` dosyasını çağırıyor.
+- Jest için vector icon font dosyalarının mock veya `moduleNameMapper` ayarı tamamlanmalı.
+- Lint uyarılarının çoğu inline style ve render içinde component tanımı kaynaklı.
+- Gerçek cihaz ekran görüntüleri henüz repoya eklenmemiştir.
+- Açık kaynak kullanım koşullarını belirleyen bir `LICENSE` dosyası henüz yoktur.
+
+## Projeyi kendi iletişim modelinize uyarlama
+
+| İhtiyaç | Tutulabilecek modüller | Sadeleştirilebilecek alanlar |
+| --- | --- | --- |
+| Duyuru ve etkinlik uygulaması | Auth, Discover, Events, Notifications | Market ve birebir chat çıkarılabilir |
+| Kulüp/topluluk platformu | Auth, Communities, Posts, Membership | Market isteğe bağlı tutulabilir |
+| Kampüs marketi | Auth, Market, Saved, Chat | Events ve Communities azaltılabilir |
+| Mesajlaşma ağı | Auth, Hub, Chat, Notifications, Profile | İçerik modülleri ayrılabilir |
+| Mentorluk/çalışma grubu | Profile, Follow, Communities, Chat | Veri modeli eşleşme mantığıyla genişletilebilir |
+
+Yeni bir modül eklerken önerilen sıra:
+
+```text
+Route → Context action → Service → Screen → Firebase rules → Test
 ```
 
-Test:
+## Proje belgeleri
 
-```sh
-npm test
-```
+- [Geliştirici kuralları ve fazlar](./docs/developer_rules.md)
+- [Figma ekran gereksinimleri](./docs/FIGMA_SCREEN_REQUIREMENTS.md)
+- [Cloud Functions planı](./docs/CLOUD_FUNCTIONS_PLAN.md)
+- [Firestore bileşik index planı](./docs/COMPOSITE_INDEX_PLAN.md)
+- [Security rules taslağı](./docs/SECURITY_RULES_DRAFT.md)
+- [Firebase seed rehberi](./docs/FIREBASE_SEED_GUIDE.md) — mevcut seed script repoda olmadığı için rehber tek başına çalıştırılabilir değildir.
 
-Firestore rules için emulator kontrolü:
+## Katkıda bulunma
 
-```sh
-firebase emulators:start --only firestore
-```
+Katkı gönderirken:
 
-Temiz teslim öncesi önerilen kontrol sırası:
+1. Değişikliğin çözdüğü iletişim ihtiyacını açıklayın.
+2. Screen → Context → Service → Firebase sınırını koruyun.
+3. Firebase çağrılarını ekran bileşenlerinin içine taşımayın.
+4. Yeni veri alanları için rules ve index etkisini kontrol edin.
+5. Yeni veya değişen ekran için gerçek cihaz görüntüsünü README'ye ekleyin.
+6. Yerel config, servis hesabı, token veya imzalama bilgisi commit etmeyin.
 
-```sh
-npm install
-npm run lint
-npm test
-firebase deploy --only firestore:rules
-firebase deploy --only functions
-```
+## Lisans
 
-## Demo Senaryosu
+Bu repoda henüz bir açık kaynak lisansı bulunmamaktadır. Başkalarının projeyi kullanma, değiştirme ve dağıtma koşullarını netleştirmek için uygun bir `LICENSE` dosyası eklenmelidir.
 
-Sunum için önerilen uçtan uca demo:
+---
 
-1. Yeni kullanıcı kaydı oluştur.
-2. Profil tamamlama ekranında departman, sınıf, ilgi alanı ve bio bilgilerini gir.
-3. Discover ekranından yeni etkinlik oluştur.
-4. İkinci kullanıcıyla giriş yap ve etkinliğe katıl.
-5. Hub ekranında katılınan etkinliğin göründüğünü göster.
-6. Community ekranında topluluk oluştur.
-7. Özel topluluğa başka kullanıcıdan katılım isteği gönder.
-8. Bildirimler ekranında isteği onayla veya reddet.
-9. Market ekranında yeni ilan oluştur.
-10. Başka kullanıcıyla ilan sahibine mesaj gönder.
-11. Messages ekranında realtime mesajlaşmayı göster.
-12. Firebase Console'da Firestore yazma/okuma değişikliklerini canlı göster.
-
-Bu demo; Auth, Firestore, Storage, Functions, Messaging ve realtime listener akışlarının birlikte çalıştığını gösterir.
-
-## Proje Komutları
-
-```sh
-npm start
-npm run android
-npm run ios
-npm run lint
-npm test
-npm run seed:firestore
-```
-
-## Teslim Notu
-
-CampusConnect, Firebase Console'da izlenebilir gerçek okuma/yazma akışlarıyla demo edilecek şekilde hazırlanmıştır. Sunum sırasında "çalışıyor ama gösteremiyorum" durumunu önlemek için demo öncesi Firebase rules ve Functions deploy durumunun kontrol edilmesi gerekir.
+<p align="center">
+  <strong>CampusConnect tamamlanmış bir kalıp değil; farklı kampüslerin kendi iletişim biçimlerini inşa edebileceği modüler bir başlangıçtır.</strong>
+</p>
